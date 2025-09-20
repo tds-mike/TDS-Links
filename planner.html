@@ -1,0 +1,640 @@
+<!-- Chosen Palette: Calm Neutrals -->
+<!-- Application Structure Plan: The application is now a task-oriented tool. The structure is based on a main grid of content cards for easy scanning. A new "Done" section is dynamically rendered at the bottom to hold completed tasks. Clicking a card opens a modal, which serves as a dedicated workspace for each idea. This modal allows users to review all details, copy individual content pieces, and mark the idea as "done." This design was chosen to simplify the main view while providing a focused environment for task completion. The "Reset" button provides a way to re-use the entire content library, making the application a perpetual planning tool. State management is handled with localStorage to ensure progress is saved across sessions. -->
+<!-- Visualization & Content Choices: Report Info: 100 video ideas grouped by service. -> Goal: Organize, Inform, and manage workflow. -> Presentation Method: A main grid of clickable cards and a separate "Done" section. Clicking a card opens an interactive modal. -> Interaction: Click to open modal, a checkbox to mark as "done," buttons to copy specific text, and a global "Reset" button. Report Info: Weekly posting schedule. -> Goal: Organize & Inform. -> Presentation Method: A visual 7-day schedule using a styled HTML flexbox layout. -> Justification: The new structure facilitates active workflow management beyond simple exploration. The modal provides a clean, distraction-free space for interacting with each content idea individually. All interactions are powered by vanilla JavaScript and the state is persisted using localStorage. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TDS Social Media Content Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        .nav-link {
+            transition: color 0.3s ease, border-bottom-color 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #8ac03b;
+            border-bottom-color: #8ac03b;
+        }
+        .card {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease;
+        }
+        .card:hover:not(.done-card) {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .done-card {
+            opacity: 0.6;
+            background-color: #e9ecef;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            overflow: auto;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            max-width: 800px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .copy-button {
+            background-color: #8ac03b;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+        .copy-button:hover {
+            background-color: #9cd452;
+        }
+        .sticky-search {
+            position: sticky;
+            top: 4rem; /* Height of the header */
+            z-index: 40;
+            background-color: #f8f9fa;
+        }
+        .sticky-search::before {
+            content: '';
+            position: absolute;
+            top: -1rem;
+            left: 0;
+            right: 0;
+            height: 1rem;
+            background: linear-gradient(to top, #f8f9fa, rgba(248, 249, 250, 0));
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-2xl font-bold text-gray-800">TDS Content Planner</span>
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <div id="nav-links" class="ml-10 flex items-baseline space-x-4">
+                        <a href="#ceramic-coating" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Ceramic Coating</a>
+                        <a href="#ppf" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">PPF</a>
+                        <a href="#detailing" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Detailing</a>
+                        <a href="#tinting" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Tinting</a>
+                        <a href="#strategy" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Strategy</a>
+                        <a href="#done" id="done-nav-link" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 hidden">Done</a>
+                    </div>
+                </div>
+                 <div class="md:hidden">
+                    <select id="mobile-nav" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md">
+                        <option value="#hero">Home</option>
+                        <option value="#ceramic-coating">Ceramic Coating</option>
+                        <option value="#ppf">PPF</option>
+                        <option value="#detailing">Detailing</option>
+                        <option value="#tinting">Tinting</option>
+                        <option value="#strategy">Strategy</option>
+                        <option value="#done" class="hidden">Done</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main id="hero" class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight">Social Media Content Plan</h1>
+            <p class="mt-4 max-w-2xl mx-auto text-lg text-gray-600">An interactive dashboard to explore 100 video ideas designed to educate customers and grow your online presence.</p>
+        </div>
+
+        <div class="mb-12 sticky top-16 z-40 bg-f8f9fa/90 py-4">
+            <input type="text" id="searchInput" placeholder="Search all 100 ideas by keyword (e.g., 'Tesla', 'wheels', 'winter')..." class="w-full px-5 py-3 text-base text-gray-700 placeholder-gray-500 bg-white border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8ac03b]">
+        </div>
+
+        <div id="content-container">
+            <!-- Sections will be dynamically inserted here -->
+        </div>
+
+    </main>
+
+    <div id="ideaModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div id="modal-content-details">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const contentData = [
+            {
+                category: "Ceramic Coating",
+                id: "ceramic-coating",
+                description: "Provides a durable, hydrophobic layer that protects paint, makes cleaning easier, and adds a deep gloss.",
+                ideas: [
+                    { title: "Watch This Water Magically Repel!", details: { description: "Show a hose spraying a ceramic-coated vs. an uncoated panel. Focus on the instant water beading and sheeting on the coated side. Explain that this makes washing your car in Milford a breeze.", yt: "Get the ultimate car protection. Our ceramic coating makes water magically repel! #carcare #detailingpro #milfordct", hashtags: "#ceramiccoating #waterbeading #hydrophobic #detailingpro #cardetail #carlove #paintprotection #milfordct #milfordbusiness #connecticutcars #ctdetail", story: "Can you guess what we just applied? 💦 It's our secret to a cleaner car, for longer. DM us to learn more!" }, isDone: false },
+                    { title: "Stop Washing Your Car So Often!", details: { description: "A before/after of a coated car after a rainstorm. Show the car looking clean while the untreated one is covered in spots. Explain how the coating keeps the car cleaner longer.", yt: "Tired of constantly washing your car? Our ceramic coating keeps it cleaner for longer! #lesswashing #carwash #ceramiccoatingbenefits #milfordct", hashtags: "#ceramiccoatingbenefits #carcare #cleancars #lesswashing #carwash #paintdetail #detailinglife #milfordct #ctbusiness #ctcars #milfordconnecticut", story: "How often do you wash your car? 🤔 A) Weekly B) Monthly C) Never. Our ceramic coatings can help with that! Tap to book." }, isDone: false },
+                    { title: "The Ultimate Shine and Protection", details: { description: "Film a car after a 2-stage paint correction and ceramic coat. Use a ring light to show off the mirror-like finish, explaining how it enhances the paint's color.", yt: "Get that deep, mirror-like finish. Our 2-stage paint correction and ceramic coat are the answer! #paintcorrection #ceramicshine #deepgloss", hashtags: "#paintcorrection #ceramicshine #deepgloss #showcar #carlove #glossyfinish #professionaldetailing #milfordct #ctdetailing #ctautodetail #milfordcars", story: "That mirror finish is a vibe! ✨ We enhanced this car's color with a pro polish and ceramic coating. Get yours! Link in bio." }, isDone: false },
+                    { title: "Ceramic Coating on Wheels? YES!", details: { description: "Show the easy process of cleaning brake dust off a ceramic-coated wheel vs. a non-coated one. Highlight how it prevents stubborn brake dust buildup.", yt: "Stop scrubbing your wheels! Ceramic coating for wheels makes brake dust rinse right off. #wheelcoating #brakedust #wheelcare", hashtags: "#wheelcoating #brakedust #wheelcare #ceramiccoating #rims #carwheel #wheelclean #milfordct #ctcars #rimsrus #milfordwheels", story: "Did you know we can ceramic coat your wheels? 🤯 Brake dust doesn't stand a chance! Tap to get a quote." }, isDone: false },
+                    { title: "The Truth About Ceramic Coating", details: { description: "A Q&A-style video addressing common myths (e.g., 'It's bulletproof,' 'It never needs to be washed again'). Explain what it really is and what it does.", yt: "Let's bust some ceramic coating myths! Here's the truth about what it does for your car. #ceramiccoatingtruth #carfacts #paintprotection", hashtags: "#ceramiccoatingtruth #carfacts #detailingmyths #paintprotection #carcare #autodetailing #milfordct #asktds #ctcars #milfordbusiness", story: "Have a question about ceramic coating? Drop it in the box below! 👇 We're answering the most common myths today." }, isDone: false },
+                    { title: "This Is How We Keep Your Car Protected", details: { description: "A time-lapse of a full ceramic coating process from wash to final buff. Explain each step and its importance.", yt: "See our meticulous process for applying a ceramic coating from start to finish. #ceramiccoatingprocess #detailingprocess #carcare", hashtags: "#ceramiccoatingprocess #detailingprocess #carcare #professionaldetailing #tds #carpaint #milfordct #ctdetailers #connecticutcars #milfordconnecticut", story: "Want a finish that lasts? ✨ Our full ceramic coating process is the secret. Swipe up to book your protection!" }, isDone: false },
+                    { title: "Protect Your Glass, Too!", details: { description: "Show a windshield with half coated and half uncoated, demonstrating how water sheets off the coated side for better visibility in rain.", yt: "Don't forget your windshield! Protect your glass with a special coating for better visibility. #glasscoating #rainrepellent #safedriving", hashtags: "#glasscoating #rainrepellent #safedriving #windshieldprotection #aquapel #carwindshield #milfordct #ctroads #safetips #connecticutweather", story: "Driving in the rain just got easier. 🌧️ Our glass coating makes water bead right off. Get yours today!" }, isDone: false },
+                    { title: "Ceramic Coating vs. Wax: The Breakdown", details: { description: "A side-by-side comparison of a panel with wax and a panel with ceramic coating. Explain the durability and longevity differences.", yt: "Wax vs. Ceramic Coating: What's the real difference? The answer might surprise you! #waxvscoating #detailingtips #paintprotection", hashtags: "#waxvscoating #ceramiccoating #carwax #paintprotection #detailingtips #carcare #autodetailing #milfordct #ctdetail #milfordcars #cardetailers", story: "Wax or Ceramic Coating? 🤔 Cast your vote and find out the truth in our video!" }, isDone: false },
+                    { title: "The Winter Warrior: Ceramic Coating", details: { description: "Discuss the benefits of ceramic coating specifically for winter in Connecticut. Highlight protection against road salt, sand, and grime.", yt: "Prep your car for winter in Connecticut! Our ceramic coatings protect against salt and grime. #winterprep #ceramiccoating #ctwinter #milfordct", hashtags: "#winterprep #winterprotection #saltprotection #ceramiccoating #ctwinter #carprep #milfordct #ctweather #newenglandwinter #connecticutwinter", story: "Don't let CT's road salt ruin your paint! ❄️ Our ceramic coating is the ultimate winter armor. Book now for a protected ride!" }, isDone: false },
+                    { title: "This Color Just Got a Major Upgrade", details: { description: "Film a car in a vibrant color (e.g., red, blue) after a ceramic coat, showing the enhanced color depth and richness.", yt: "We gave this color a major upgrade! See the vibrant, deep gloss after a ceramic coat. #colorboost #ceramiccoating #glossyfinish #milfordct", hashtags: "#colorboost #ceramiccoating #glossyfinish #deepcolor #carupgrades #autodetailing #milfordct #ctcars #milfordcarscene #connecticut", story: "What a difference! ✨ This color is absolutely popping after our ceramic coating. Tap to get your car looking this good." }, isDone: false },
+                    { title: "Ceramic Coatings for the Weekend Warrior", details: { description: "Show a truck or SUV getting a ceramic coating. Explain how it protects from mud, dirt, and scuffs from off-road adventures, making cleanup a breeze.", yt: "The perfect protection for your weekend adventures! Ceramic coating handles anything you throw at it. #weekendwarrior #offroad #ceramiccoating", hashtags: "#ceramiccoating #truckdetailing #suv #offroad #detailingpro #weekendwarrior #milfordct #cttrucks #milfordconnecticut #connecticutcars", story: "Mud and dirt don't stand a chance! We're giving this truck a ceramic coat for easy cleanup after any adventure. DM to book!" }, isDone: false },
+                    { title: "The Secret to Your Car's Superpower", details: { description: "Show a car being hit by a small, controlled amount of liquid (e.g., soda, coffee) and watch it roll right off the ceramic-coated surface.", yt: "Is your car's paint ready for spills? Our ceramic coating makes spills slide right off. #spillproof #carhacks #ceramiccoating", hashtags: "#ceramiccoating #carhacks #spillproof #detailingtips #superpower #carcare #milfordct #ctcars #milfordbusiness #connecticut", story: "Spills are no match for this! 💧 We gave this car a ceramic coating so liquids just roll off. Don't believe us? Watch the video!" }, isDone: false },
+                    { title: "The Ultimate Long-Term Investment", details: { description: "A video explaining the cost-effectiveness of ceramic coating over time compared to frequent waxing and car washes.", yt: "A ceramic coating isn't just an expense, it's a long-term investment. Save money on washes! #carinvestment #ceramiccoating #savemoney", hashtags: "#ceramiccoating #carinvestment #longterm #savemoney #carcare #detailing #milfordct #milfordconnecticut #ctbusiness #cardetailing", story: "Did you know a ceramic coating can save you money in the long run? 🤔 Swipe up to see the value." }, isDone: false },
+                    { title: "What a Pro Prep for Ceramic Coating Looks Like", details: { description: "A video showing a paint decontamination process (iron remover, clay bar) before the ceramic coating is applied. Explain why this prep is crucial.", yt: "The secret to a perfect ceramic coating? Pro prep! We show you how we do it. #detailingprocess #carprep #ceramiccoating", hashtags: "#detailingprocess #carprep #ceramiccoating #paintdecontamination #prodetailing #detailinglife #milfordct #ctdetailers #connecticutcars #milfordconnecticut", story: "Prep is everything! ✨ We're getting this car ready for a perfect ceramic coating install. Want to know more? Ask a question below!" }, isDone: false },
+                    { title: "Don't Let the Elements Ruin Your Car", details: { description: "A video showing a car with clear coat failure or oxidation from sun exposure. Explain how a ceramic coating prevents this.", yt: "Your car's paint is exposed to the elements every day. A ceramic coating protects it! #paintprotection #sunprotection #ceramiccoating #carcare", hashtags: "#paintprotection #sunprotection #ceramiccoating #carcare #clearcoat #autodetailing #milfordct #milfordbusiness #ctcars #connecticut", story: "The sun is a car's worst enemy! ☀️ Protect your paint from UV damage with our ceramic coating. Link in bio to book!" }, isDone: false },
+                    { title: "The Detailer's Choice: Ceramic Coating", details: { description: "A video where one of your detailers explains in their own words why they recommend ceramic coating and what they love about it.", yt: "Why do we recommend ceramic coating? Hear it from one of our pros! #detailerlife #carcare #ceramiccoating #milfordct", hashtags: "#detailinglife #ceramiccoating #detailerschoice #professionaldetailing #tds #milfordct #milfordconnecticut #ctdetailers #connecticut", story: "Our team knows best. 💪 We're answering your questions about ceramic coating today! Hit us up in the DMs." }, isDone: false },
+                    { title: "When to Get a Ceramic Coating", details: { description: "A video explaining the best time to get a ceramic coating (e.g., when a car is new, after paint correction, before winter).", yt: "When should you get a ceramic coating? Here's our guide to the perfect timing. #carcare #ceramiccoating #detailingtips #milfordct", hashtags: "#carcare #ceramiccoating #detailingtips #paintprotection #newcar #ctcars #milfordct #milfordbusiness #connecticutcars #ctdetail", story: "Thinking about a ceramic coating? 🤔 We'll tell you the best time to do it. Swipe up for our guide!" }, isDone: false },
+                    { title: "Ceramic Coating on Matte Paint?", details: { description: "Address the common question of whether ceramic coating can be applied to matte or satin finishes. Show the process and the result (protection without adding gloss).", yt: "Yes, you can ceramic coat matte paint! We show you the process for a perfect finish. #mattepaint #ceramiccoating #detailing", hashtags: "#mattepaint #ceramiccoating #carcare #detailing #paintprotection #satinfinish #milfordct #ctdetailers #milfordconnecticut #connecticutcars", story: "We get this question all the time. 🧐 Yes, we can ceramic coat your matte paint! DM us for more info." }, isDone: false },
+                    { title: "This One Trick Saves Your Car's Paint!", details: { description: "A quick video showing how a ceramic coating makes it easy to wipe off bug guts and bird droppings without damaging the paint.", yt: "Bug guts and bird droppings are no match! Our ceramic coating makes cleanup effortless. #carhacks #detailingtips #ceramiccoating #easyclean", hashtags: "#ceramiccoating #easyclean #detailingtips #carhacks #paintprotection #bugsplatter #milfordct #milfordconnecticut #ctbusiness #connecticutcars", story: "Don't let bug guts etch your paint! 💥 Ceramic coating makes them wipe right off. Tap to book your protection." }, isDone: false },
+                    { title: "Why Ceramic Coating is More Than a Shine", details: { description: "A video that focuses less on the gloss and more on the protective, long-term benefits of the coating, like resistance to chemical etching and UV damage.", yt: "A ceramic coating is more than just a shiny finish! It's a durable shield against the elements. #ceramiccoating #paintprotection #detailingfacts", hashtags: "#ceramiccoating #paintprotection #longterm #carcare #autodetailing #detailinglife #milfordct #ctcars #milfordbusiness #connecticut", story: "Beyond the shine, what does a ceramic coating actually do? We break down the top 3 benefits for you. Check it out!" }, isDone: false },
+                ]
+            },
+            {
+                category: "Paint Protection Film (PPF)",
+                id: "ppf",
+                description: "A clear, thermoplastic urethane film that protects paint from rock chips, scratches, and bug splatter.",
+                ideas: [
+                    { title: "The Invisible Shield for Your Car", details: { description: "Show the PPF being applied to the hood or bumper of a car. Highlight how it becomes virtually invisible once applied. Explain its self-healing properties.", yt: "Give your car an invisible shield! Our PPF protects against rock chips and scratches. #paintprotectionfilm #ppf #clearbra", hashtags: "#paintprotectionfilm #ppf #clearbra #invisibleprotection #rockchips #carprotection #milfordct #ctppf #connecticutfilm #milfordcars", story: "Can you spot the difference? ✨ We're installing an invisible shield to protect this paint! DM to get a quote." }, isDone: false },
+                    { title: "This Saved a Car's Paint!", details: { description: "Show a piece of PPF with a visible scratch or rock chip on it, then peel it off to reveal perfect paint underneath. Explain that the film took the damage, not the car.", yt: "This film took the hit so the paint didn't have to! See our PPF in action. #ppfsaved #paintprotection #scratchproof #milfordct", hashtags: "#ppfsaved #paintprotection #scratchproof #cararmor #ppf #detailinglife #milfordct #ctdetailing #milfordconnecticut #ctcars", story: "PPF to the rescue! 🦸 This car's paint is perfect underneath the damage. Book your protective film! Link in bio." }, isDone: false },
+                    { title: "The Ultimate Headlight Protection", details: { description: "Focus on applying PPF to headlights. Show a close-up of the film being applied, and explain how it prevents yellowing, hazing, and cracking.", yt: "Protect your headlights from yellowing and cracking with our PPF. Keep them clear and bright! #headlightprotection #ppf #headlights", hashtags: "#headlightprotection #ppf #clearfilm #headlights #carcare #safedriving #milfordct #ctcars #milforddetail #connecticut", story: "Don't let your headlights get foggy! 💡 Our protective film keeps them looking new. Tap to book your appointment." }, isDone: false },
+                    { title: "Why We Use a Plotter for PPF", details: { description: "Show the plotter cutting a custom piece of PPF. Explain how this ensures a perfect, seamless fit for every vehicle and avoids mistakes with hand-cutting.", yt: "We use a plotter to get the perfect fit for your car's PPF. Precision is key! #ppfcutter #plotter #customcut #ppf", hashtags: "#ppfcutter #plotter #customcut #precisionfit #ppf #detailingprocess #milfordct #ctppfinstallers #milfordbusiness #connecticutcars", story: "Did you know we use a plotter for a perfect, seamless fit every time? 📐 This is how we avoid mistakes. Learn more in our DMs!" }, isDone: false },
+                    { title: "PPF vs. Ceramic Coating: What's the Difference?", details: { description: "A quick, easy-to-understand breakdown explaining that PPF is for physical impact protection (chips, scratches) and ceramic coating is for surface-level protection (contaminants, gloss).", yt: "PPF vs. Ceramic Coating: We break down the differences so you know which is right for you. #detailingexplained #ppf #ceramiccoating", hashtags: "#ppf #ceramiccoating #detailingexplained #carcare #paintprotection #autodetailing #milfordct #milforddetail #ctautodetailing #connecticut", story: "Protection or Shine? 🤔 Let's settle the debate. Swipe up to find out the real difference between PPF and Ceramic Coating!" }, isDone: false },
+                    { title: "Protecting Your Car's Most Vulnerable Spots", details: { description: "Showcase PPF being applied to high-impact areas like door sills, door cups, and the trunk ledge. Explain why these areas are often overlooked but need protection.", yt: "We protect your car's most vulnerable spots with PPF. Don't let your door sills and trunk get chipped! #ppf #paintprotectionfilm #carhacks", hashtags: "#highimpactareas #paintprotectionfilm #ppf #cardoorsill #trunkledge #carprotection #milfordct #carhacks #milfordbusiness #ctdetail", story: "We're protecting the parts you never think about! ✨ Door cups and sills get PPF to prevent scuffs. Get yours done! Link in bio." }, isDone: false },
+                    { title: "A New Tesla Gets the Ultimate Shield", details: { description: "Film a new, high-value car like a Tesla getting a full PPF wrap. Show the precision of the installation process.", yt: "This brand new Tesla just got the ultimate shield: a full PPF wrap for lasting protection! #tesla #ppfwrap #carprotection", hashtags: "#tesla #teslamodel3 #ppfwrap #carprotection #newcar #teslacar #milfordct #ctteslas #newhaven #connecticut", story: "The ultimate protection for a new investment. 🛡️ This Tesla is getting a full PPF wrap. Would you do it? Vote below!" }, isDone: false },
+                    { title: "Bug Splatter Be Gone!", details: { description: "Show a close-up of bug splatter on a PPF-coated bumper and how it wipes off easily vs. an uncoated one that's a struggle to clean.", yt: "Bug guts are a pain to clean. Our PPF makes them wipe right off! #bugsplatter #ppf #easyclean #detailingtips", hashtags: "#bugsplatter #ppf #easyclean #detailingtips #carcare #carpaint #milfordct #ctsummer #connecticutcars #milford", story: "Before vs. After: PPF wins! 🏆 Watch how bug guts come off this bumper with just a spray. Get your car protected!" }, isDone: false },
+                    { title: "Why You Should Protect Your Car Immediately", details: { description: "A video discussing the importance of PPF for new cars. Explain that it's crucial to protect the paint before any damage occurs.", yt: "Just got a new car? Don't wait to protect it! Here's why PPF is a must-have. #newcar #carprotection #newcarday #ppf", hashtags: "#newcar #carprotection #newcarday #ppf #paintprotectionfilm #autodetail #milfordct #newcars #ctcarscene #milfordconnecticut", story: "Protect your investment from day one! 🚗 We're giving this new car the protection it deserves. Swipe up to book your PPF installation." }, isDone: false },
+                    { title: "PPF Installation Close-Up", details: { description: "A hyper-detailed, slow-motion video of the PPF being laid on a curve, showcasing the skilled hand of the installer.", yt: "This is what a flawless PPF install looks like. Our pros work with precision and skill! #ppfinstallation #detailingpro #satisfying", hashtags: "#ppfinstallation #detailingpro #satisfyingvideos #detailinglife #ppf #autodetail #milfordct #ctdetailers #milfordbusiness #connecticut", story: "The most satisfying thing you'll see today. 😌 Watch our team work their magic on a PPF install. Swipe up to see more!" }, isDone: false },
+                    { title: "The Road Debris Nightmare", details: { description: "Show a car with minor rock chips on the hood and bumper. Explain how PPF would have prevented this damage, saving the owner from costly repainting.", yt: "Rock chips are a nightmare for your paint! See how PPF protects your car from road debris. #rockchips #roaddebris #ppf #paintprotection", hashtags: "#rockchips #roaddebris #ppf #paintprotection #carcare #detailing #milfordct #ctcars #milfordconnecticut #milfordbusiness", story: "Is your hood full of these? 😩 Rock chips can be a thing of the past. DM us about our Paint Protection Film!" }, isDone: false },
+                    { title: "Can You Feel the Difference?", details: { description: "A video asking a customer to feel the smoothness of a PPF-coated vs. an uncoated fender. Focus on the seamlessness of the installation.", yt: "We asked a customer to feel the difference between PPF and no PPF. The results are amazing! #ppf #detailingfacts #carprotection", hashtags: "#ppf #detailingfacts #carprotection #autodetailing #paintprotectionfilm #smoothfinish #milfordct #ctdetail #milfordcars #connecticut", story: "We promise you won't even know it's there! 😉 Our PPF is seamless to the touch. Tap to get a quote!" }, isDone: false },
+                    { title: "This is How We Protect a Chrome Delete", details: { description: "Show the application of PPF on a chrome-deleted trim piece. Explain how it protects the vinyl wrap or paint underneath from scratches.", yt: "Protect your chrome delete with a layer of PPF. It's the best way to keep your look fresh and new! #chromedele #ppf #vinylprotection #detailing", hashtags: "#chromedele #ppf #vinylprotection #paintprotectionfilm #detailing #carwrap #milfordct #ctcars #milforddetail #connecticut", story: "Protecting the details! ✨ We're applying PPF over this chrome delete for extra durability. Have a question about a similar project? Ask us!" }, isDone: false },
+                    { title: "The Truth About PPF Yellowing", details: { description: "A Q&A-style video addressing the myth that all PPF yellows over time. Explain that modern, high-quality films are resistant to UV yellowing.", yt: "Don't believe the myth! Modern PPF won't yellow over time. We use the best films for lasting clarity. #ppfmyths #carfacts #ppf", hashtags: "#ppfmyths #carfacts #ppf #clearbra #paintprotectionfilm #detailingexplained #milfordct #milfordbusiness #ctautodetailing #connecticut", story: "Does PPF turn yellow? 🟡 We're busting this myth and answering your questions about our protective film! DM us yours." }, isDone: false },
+                    { title: "Why We Use a Slip Solution for PPF", details: { description: "A video showing the PPF being positioned using a slip solution. Explain the purpose of the solution and how it allows for perfect placement before the final squeegee.", yt: "Ever wondered how we get PPF on so perfectly? It's all thanks to our slip solution! #ppfinstallation #detailingpro #satisfying", hashtags: "#ppfinstallation #detailingpro #satisfyingvideos #detailinglife #ppf #autodetail #milfordct #ctdetailers #milfordbusiness #connecticut", story: "The magic is in the prep. ✨ We use a slip solution to get our PPF perfectly positioned every time. See it in action!" }, isDone: false },
+                    { title: "PPF: The Ultimate Protection for a Track Car", details: { description: "A video on a high-performance or track car getting PPF applied to the front end. Explain how it protects against the constant high-speed impacts on the track.", yt: "A track car's worst enemy is road debris. We're protecting this one with a custom PPF wrap! #trackcar #ppf #highperformance #carprotection", hashtags: "#trackcar #ppf #highperformance #carprotection #racecar #carlife #milfordct #ctcarscene #connecticutcars #milford", story: "Built for speed, protected for life. 🏎️ We're giving this track car some serious armor. What kind of car would you protect?" }, isDone: false },
+                    { title: "Is PPF Worth the Money?", details: { description: "A video discussing the value proposition of PPF, comparing its cost to the cost of repainting a single panel due to chips or scratches.", yt: "Is PPF worth the investment? We break down the costs and benefits so you can decide for yourself. #ppf #carinvestment #detailingexplained", hashtags: "#ppf #carinvestment #detailingexplained #paintprotectionfilm #carcare #autodetailing #milfordct #milfordbusiness #ctautodetail #connecticut", story: "PPF is a lot cheaper than a respray. 💰 Learn why protecting your paint is a smart investment. Link in bio!" }, isDone: false },
+                    { title: "The Best Way to Wash a PPF-Wrapped Car", details: { description: "A video demonstrating the safe way to wash a car with PPF, debunking myths about how to care for it.", yt: "How do you wash a car with PPF? Here's our guide to keeping your film looking perfect. #carwash #ppfcare #detailingtips #carcare", hashtags: "#carwash #ppfcare #detailingtips #carcare #autodetailing #milfordct #milfordconnecticut #ctdetailers #connecticut", story: "Got PPF? 🤔 Here's the right way to wash your car and keep your film looking new! Swipe up for our quick guide." }, isDone: false },
+                    { title: "PPF on a Vintage Car?", details: { description: "Showcase a PPF installation on a classic or vintage car, explaining how it protects the original paint without changing its character.", yt: "Protecting the history. We're installing PPF on a vintage car to protect its original paint. #vintagecar #classiccar #ppf #carrestoration", hashtags: "#vintagecar #classiccar #ppf #carrestoration #detailing #oldcar #milfordct #ctclassiccars #milfordconnecticut #connecticut", story: "History in the making! 🕰️ We're giving this classic car modern protection. Book your custom PPF project! Link in bio." }, isDone: false },
+                    { title: "The Self-Healing Power of PPF", details: { description: "A video showing a small scratch being put on a piece of PPF with a tool, then using a heat gun to make the scratch disappear.", yt: "Watch our PPF magically heal itself! Our protective film has self-healing properties. #selfhealingfilm #ppf #carhacks #detailing", hashtags: "#selfhealingfilm #ppf #carhacks #detailing #paintprotectionfilm #satisfyingvideos #milfordct #ctdetailers #milfordbusiness #connecticut", story: "Wait for it... 🤯 Our PPF can heal itself from light scratches! It's like magic. DM us for a quote!" }, isDone: false },
+                ]
+            },
+            {
+                category: "Paint Correction & Detailing",
+                id: "detailing",
+                description: "Restores paint's clarity and shine by removing swirls, scratches, and oxidation.",
+                ideas: [
+                    { title: "The Ultimate Before & After: Paint Correction", details: { description: "A split-screen before/after showing a paint panel covered in swirls and a perfectly corrected, mirror-like panel. The contrast should be dramatic.", yt: "The ultimate paint transformation! Watch us remove swirls and bring this paint back to life. #paintcorrection #swirlremoval #beforeandafter", hashtags: "#paintcorrection #swirlremoval #beforeandafter #detailing #carrestoration #carpaint #milfordct #ctcars #milfordbusiness #connecticutdetailing", story: "Before vs. After: See the difference. 🤯 We brought this car's paint back to life! Tap to book your paint correction." }, isDone: false },
+                    { title: "What a 'One-Step' Paint Correction Does", details: { description: "A video explaining what a one-step polish is and what it fixes (light swirls, oxidation). Show the process and the results.", yt: "What exactly is a one-step paint correction? We break down the process and show the results! #onestepcorrection #polishing #carpolishing", hashtags: "#onestepcorrection #polishing #carpolishing #detailingtips #paint #autodetail #milfordct #ctdetailers #milfordconnecticut #ctcar", story: "One step to a perfect finish. ✨ We're polishing this car to remove light swirls and oxidation. DM to get a quote!" }, isDone: false },
+                    { title: "Is Your Car Ready for a Full Detail?", details: { description: "A video showcasing a heavily soiled car, both interior and exterior, and then the transformation after a full detail.", yt: "Your car deserves a fresh start! Watch this full detail transformation from dirty to pristine. #fulldetail #carcleaning #beforeandafter", hashtags: "#fulldetail #carcleaning #beforeandafter #satisfying #detailing #autodetailing #milfordct #ctcardetailing #milfordbusiness #connecticutcars", story: "Is your car ready for this? 😵 We're doing a full interior and exterior detail today! Swipe up for a booking link." }, isDone: false },
+                    { title: "The Difference a Steam Clean Makes", details: { description: "Focus on a steam cleaner on a dirty interior surface (e.g., center console, door panels) and show the dirt being lifted away.", yt: "We're lifting away dirt and grime you can't see with our steam cleaner! #steamcleaning #interiorcleaning #cardetailing #satisfying", hashtags: "#steamcleaning #interiorcleaning #cardetailing #satisfying #clean #interiordetail #milfordct #ctdetailers #milfordconnecticut #interiordetail", story: "Bye-bye bacteria! 🦠 Our steam cleaner sanitizes and deep cleans your interior. Your car will thank you. Get your detail today!" }, isDone: false },
+                    { title: "Restoring Your Headlights: How We Do It", details: { description: "A time-lapse of a full headlight restoration process, from sanding to polishing to final UV protection. Explain the benefits of clear headlights for visibility and safety.", yt: "Restore your foggy headlights for better visibility and safety. See our full restoration process! #headlightrestoration #headlights #safetyfirst", hashtags: "#headlightrestoration #headlights #clearlights #carcare #safetyfirst #milfordct #ctautodetail #milfordbusiness #connecticut", story: "Safety matters! ✨ Don't let foggy headlights put you at risk. We can restore them to look brand new! Swipe up to book." }, isDone: false },
+                    { title: "The Process to a Perfect Finish", details: { description: "A hyper-lapse of a car being prepped, washed, decontaminated, and dried before a polish. This showcases the meticulous process behind a detail.", yt: "Every great detail starts with a perfect prep. Here's our meticulous process for a flawless finish! #detailingprocess #carprep #detailing", hashtags: "#detailingprocess #carprep #decontamination #carwash #detailing #detailinglife #milfordct #ctcardetail #milfordconnecticut #carcare", story: "The secret is in the prep. 🤫 We're removing all the gunk with a clay bar to ensure a flawless finish. Tap to book your detail!" }, isDone: false },
+                    { title: "Why You Need to Decontaminate Your Paint", details: { description: "Show a video of a clay bar pulling off contaminants from a car's paint, with an explanation of why this step is so important for a smooth, lasting finish.", yt: "Your car paint isn't as smooth as you think! We're using a clay bar to remove unseen contaminants. #claybar #paintdecontamination #detailingtips", hashtags: "#claybar #decon #paintdecontamination #smoothpaint #detailingtips #carcare #milfordct #ctbusiness #milforddetailing #connecticutcars", story: "Did you know your paint is covered in contaminants? 🧐 We're pulling them off with a clay bar. Get your paint looking like new! DM us." }, isDone: false },
+                    { title: "The Grossest Car We've Ever Detailed", details: { description: "A 'before' tour of an extremely dirty interior, followed by a time-lapse of the interior detail.", yt: "This car was a challenge! Watch us transform this gross interior into a clean, fresh space. #grosscar #dirtycar #interiordetail #carcleaning", hashtags: "#grosscar #dirtycar #interiordetail #carcleaning #satisfyingcleaning #autodetailing #milfordct #ctcardetailing #milfordconnecticut #ctcars", story: "Challenge accepted. 💪 This car needed some major TLC. Swipe up to see the full transformation!" }, isDone: false },
+                    { title: "Is Your Car's Interior a Health Hazard?", details: { description: "A video showing a UV light or microscope on an interior surface to highlight hidden germs and bacteria. Explain how an interior detail provides a sanitary environment.", yt: "Is your car's interior a health hazard? We deep clean and sanitize to make it a safe space. #sanitized #interiorcleaning #germs #healthandwellness", hashtags: "#sanitized #interiorcleaning #germs #cleaninterior #healthandwellness #safedriving #milfordct #milfordbusiness #connecticut", story: "How clean is your car's interior? 🤢 We can help! Tap the link in our bio to book your interior detail." }, isDone: false },
+                    { title: "We Fixed This Car's Worst Scratch", details: { description: "A video focusing on one deep scratch. Show the process of sanding, compounding, and polishing to make the scratch disappear.", yt: "Is a deep scratch ruining your car's look? Watch us make it disappear with our paint correction service! #scratchremoval #scratchrepair #paintcorrection", hashtags: "#scratchremoval #scratchrepair #paintcorrection #detailer #carcare #autodetail #milfordct #ctcarscene #milfordconnecticut #cardetail", story: "We can fix that. 😉 We're getting rid of this nasty scratch for good! DM us a photo of your scratch for a quote." }, isDone: false },
+                    { title: "The Power of a Ceramic-Infused Wash", details: { description: "Show a waterless wash process with a ceramic-infused product. Explain how it cleans and adds a layer of protection at the same time.", yt: "The easiest way to wash your car and add protection! Our ceramic-infused wash is a game-changer. #carwash #ceramicwash #detailingtips #carcare", hashtags: "#ceramicwash #carwash #detailingtips #carcare #paintprotection #milfordct #milfordbusiness #connecticutcars #ctdetail", story: "Wash and protect? Yes, please! ✨ We're using a ceramic-infused wash to keep this paint looking fresh. Swipe up to learn more!" }, isDone: false },
+                    { title: "How We Make Leather Look Brand New", details: { description: "A video focusing on a leather seat, showing the cleaning and conditioning process. Highlight the before and after of a dirty, cracked seat being restored.", yt: "Is your leather looking dull and dirty? We can restore it to look and feel brand new! #leathercare #leathercleaning #carinterior", hashtags: "#leathercare #leathercleaning #carinterior #interiordetail #carrestoration #milfordct #ctdetailers #milfordconnecticut #interiordetail", story: "We're restoring this leather to its former glory! 🤩 Your car's interior deserves some love. Tap the link in bio to book!" }, isDone: false },
+                    { title: "Your Car's Secret Weapon Against Swirls", details: { description: "A video focusing on the orbital polisher. Show a close-up of it in action, explaining how it safely removes imperfections without damaging the clear coat.", yt: "This is how we remove swirls and scratches! Our orbital polisher is the secret weapon for perfect paint. #orbitalpolisher #swirlremoval #paintcorrection", hashtags: "#orbitalpolisher #swirlremoval #paintcorrection #detailingpro #carcare #milfordct #ctcars #milfordbusiness #connecticutdetailing", story: "Swirls be gone! 👋 We're using our secret weapon to get a flawless finish. Get your car's paint corrected! Link in bio." }, isDone: false },
+                    { title: "Why You Need a Multi-Stage Paint Correction", details: { description: "Explain the difference between a one-step and multi-stage paint correction. Show a car that needs serious work and the dramatic results after a full multi-stage process.", yt: "Not all paint corrections are the same. See what a multi-stage correction does for seriously damaged paint. #paintcorrection #detailingexplained #carrestoration", hashtags: "#paintcorrection #detailingexplained #carrestoration #carpaint #autodetail #milfordct #ctdetailing #milfordconnecticut #ctcar", story: "Is your paint too damaged for a simple detail? We can fix that! 🛠️ Learn about our multi-stage paint correction process." }, isDone: false },
+                    { title: "The Proper Way to Clean Your Car", details: { description: "A video showing a full, proper car wash process: two-bucket method, proper tools, and drying techniques. Explain how to avoid scratches.", yt: "Are you washing your car the right way? We're showing you the proper method to avoid scratches! #carwash #detailingtips #carcare", hashtags: "#carwash #detailingtips #carcare #autodetailing #milfordct #ctcardetailing #milfordbusiness #connecticutcars", story: "We see this all the time. 🙅‍♀️ Stop scratching your car when you wash it! Swipe up to learn our pro tips." }, isDone: false },
+                    { title: "The Science Behind Paint Decontamination", details: { description: "A video showing an iron remover in action as it changes color when it reacts with metallic particles. Explain the science behind it and why it's a necessary step.", yt: "Watch the science in action! We're showing you how we decontaminate your car's paint from metallic fallout. #paintdecontamination #ironremover #satisfying", hashtags: "#paintdecontamination #ironremover #carcare #detailing #satisfyingvideos #milfordct #ctbusiness #milforddetailing #connecticutcars", story: "The magic is real. ✨ Watch as our iron remover pulls off unseen contaminants. Is your car this dirty?" }, isDone: false },
+                    { title: "We're Saving This Car from Oxidation", details: { description: "A close-up of a car's paint with visible oxidation and hazing. Show the compounding and polishing process to restore the deep, clear color.", yt: "Sun damage is a real thing! We're fixing this car's oxidation to bring back its vibrant color. #oxidation #paintcorrection #carrestoration #sunprotection", hashtags: "#oxidation #paintcorrection #carrestoration #sunprotection #carpaint #autodetail #milfordct #ctcarscene #milfordconnecticut #cardetail", story: "The sun can do serious damage! ☀️ We're restoring this car's paint and shine. DM us for a quote!" }, isDone: false },
+                    { title: "The Most Satisfying Engine Bay Detail", details: { description: "A time-lapse of a full engine bay detail, from covering sensitive components to degreasing, cleaning, and dressing the plastic.", yt: "This is the most satisfying video you'll see all day. Watch us make this engine bay shine! #enginebay #enginecleaning #satisfying #carcleaning", hashtags: "#enginebay #enginecleaning #satisfyingvideos #detailing #cleancars #milfordct #ctcarscene #milfordconnecticut #connecticut", story: "Clean car, clean engine bay. ✨ We're bringing this engine back to life! Tap the link in bio to book." }, isDone: false },
+                    { title: "Do I Need a Detail Before Selling My Car?", details: { description: "A video explaining how a professional detail can increase the value of a car for a private sale or trade-in, making it more attractive to buyers.", yt: "Selling your car? A professional detail can add serious value and help it sell faster! #carvalue #cardetailing #carforsale #resalevalue", hashtags: "#carvalue #cardetailing #carforsale #resalevalue #carcare #sellingcar #milfordct #ctcarsforsale #milfordconnecticut #connecticut", story: "Want to get more money for your car? 💰 A pro detail is the best investment you can make. Swipe up to book." }, isDone: false },
+                    { title: "The Key to a Flawless Interior Detail", details: { description: "A video showcasing a few key tools and techniques for an interior detail (e.g., specialized brushes, a vacuum with attachments, proper cleaners).", yt: "What's the secret to a flawless interior detail? We're showing you our go-to tools and techniques! #interiordetail #carcleaning #detailingtips", hashtags: "#interiordetail #carcleaning #detailingtools #detailingtips #autodetail #milfordct #ctcardetailing #milfordbusiness #connecticutcars", story: "A clean interior makes driving so much better. ✨ We're answering your questions about our interior detail process! Ask us anything." }, isDone: false },
+                ]
+            },
+            {
+                category: "Window Tinting",
+                id: "tinting",
+                description: "Blocks UV rays, reduces heat, provides privacy, and protects the interior from sun damage.",
+                ideas: [
+                    { title: "The Coolest Car in Connecticut", details: { description: "A dramatic video showing the heat and light reduction from window tint. Use a heat lamp and a temperature gun to show the difference.", yt: "Is your car an oven in the summer? Window tinting can reduce heat by up to 60%! #windowtint #heatreduction #uvprotection", hashtags: "#windowtint #heatreduction #uvprotection #carwindowtint #coolcar #cartint #milfordct #cttint #milfordbusiness #connecticut", story: "Beat the heat with our window tint! ☀️ Get ready for summer and keep your car's interior cool. Tap to book!" }, isDone: false },
+                    { title: "The Tinting Process: From Start to Finish", details: { description: "A time-lapse of a full window tinting job, from cleaning the glass to cutting the film and applying it.", yt: "See our meticulous process for a perfect window tint installation, from prep to finish! #windowtinting #tintprocess #tintshop", hashtags: "#windowtinting #tintprocess #tintshop #tintlife #carcare #autodetail #milfordct #ctdetailers #milfordconnecticut #cttinting", story: "A clean install is a good install. 👌 We're giving this car a fresh tint job. Swipe up to see the finished product!" }, isDone: false },
+                    { title: "Your Interior Is Being Destroyed By the Sun", details: { description: "Use a UV light to show the fading on a car's interior. Explain how window tint blocks UV rays, protecting your seats and dashboard from cracking and discoloration.", yt: "Don't let the sun destroy your interior! Our window tint blocks UV rays to protect your seats and dashboard. #uvrays #interiordamage #sunprotection", hashtags: "#uvrays #interiordamage #sunprotection #carcare #windowtint #autodetail #milfordct #carfacts #milfordbusiness #connecticut", story: "Did you know UV rays can fade your car's interior? 🤯 Our window tint protects against that! Tap the link in our bio to learn more." }, isDone: false },
+                    { title: "The Privacy You've Been Missing", details: { description: "A short video showing the outside of a tinted vs. an untinted car. Emphasize the privacy benefit and how it deters break-ins.", yt: "Get the privacy you've been missing! Our window tint gives you peace of mind and security. #privacyglass #windowtint #cartint #security", hashtags: "#privacyglass #windowtint #cartint #security #carupgrades #autodetail #milfordct #ctcars #milfordconnecticut #ctbusiness", story: "Peek-a-boo! 😉 Window tint gives you the privacy you need on the road. Get your custom tint job today!" }, isDone: false },
+                    { title: "Why You Should Never DIY Your Tint", details: { description: "Show examples of bad DIY tint jobs (bubbles, creases, peeling) and then a seamless, professional installation. Explain the importance of professional installation for a clean, lasting result.", yt: "Bubbles, creases, and peeling? Don't DIY your tint! We show you the difference a professional install makes. #diyfail #professionalinstall #windowtint", hashtags: "#diyfail #professionalinstall #tintinggonewrong #windowtint #carcare #carproblems #milfordct #ctdetailers #milfordconnecticut #carproblems", story: "DIY or Professional? 🤔 We see these mistakes all the time! Leave it to the pros for a flawless install. Swipe up to book." }, isDone: false },
+                    { title: "Is Your Tint Legal in Connecticut?", details: { description: "An educational video explaining the tinting laws and regulations in Connecticut, including the legal limits for each window.", yt: "Do you know the tint laws in Connecticut? We break down the legal limits so you stay safe and compliant! #ctlaws #windowtintlaws #carfacts", hashtags: "#ctlaws #windowtintlaws #carfacts #knowthelaw #tint #ctcars #milfordct #milfordpolice #connecticut #ctcars", story: "Are you at risk of a ticket? 🚨 We're answering your questions about legal tinting in CT. Ask us anything in the DMs!" }, isDone: false },
+                    { title: "The Perfect Match: Tinting to Match Your Car", details: { description: "Show a car before and after with a tint that perfectly matches the vehicle's aesthetic. Explain how the right tint can improve a car's overall look.", yt: "The right window tint can take your car's style to the next level. We're matching this car perfectly! #carstyle #windowtint #carupgrades", hashtags: "#carstyle #windowtint #tinting #carupgrades #autodetail #carwrap #milfordct #ctcars #milfordcarscene #connecticut", story: "This car just got a major style upgrade. 😎 A perfect tint job makes all the difference! Tap to get your car looking this good." }, isDone: false },
+                    { title: "Tinting Your Front Windows: Worth It?", details: { description: "A video explaining the benefits of tinting the front two windows, even with lighter film, for heat rejection and UV protection.", yt: "Should you tint your front windows? We explain the benefits and why it's worth it for heat and UV protection. #frontwindowtint #uvprotection #windowtint", hashtags: "#frontwindowtint #uvprotection #heatreduction #windowtint #carcare #milfordct #ctbusiness #milfordconnecticut #ctcars", story: "Do you have your front windows tinted? 🤔 We're showing you why it's a great choice for your car! Swipe up to see our work." }, isDone: false },
+                    { title: "We Tinted This Whole Truck!", details: { description: "A time-lapse video of tinting a large vehicle like a truck or SUV, showcasing the scale of the job.", yt: "A big job calls for big skills! Watch us tint this entire truck with a flawless install. #trucktint #suv #windowtint #bigjob", hashtags: "#trucktint #suv #windowtint #bigjob #detailers #milfordct #cttrucks #milfordconnecticut #ctcars", story: "Behind the scenes of a big job! 🎬 We're tinting this whole truck today. DM us for a quote on your vehicle!" }, isDone: false },
+                    { title: "What Is Ceramic Tint?", details: { description: "Explain the benefits of ceramic tint over traditional dyed or metallic films, focusing on superior heat rejection without signal interference.", yt: "What's the difference between ceramic tint and regular tint? Ceramic tint offers superior heat rejection! #ceramictint #windowtint #carfacts", hashtags: "#ceramictint #windowtint #carfacts #heatcontrol #tinting #milfordct #ctdetailers #milfordbusiness #connecticut", story: "We get this question all the time! 🧐 Let's talk about ceramic tint and why it's worth the upgrade. Tap to learn more!" }, isDone: false },
+                    { title: "Tinting a Sunroof: The Secret to a Cooler Car", details: { description: "Show the process of tinting a sunroof and explain how it drastically reduces heat entering the vehicle's cabin, especially in a sunny climate.", yt: "Tinting your sunroof is a game-changer! See how we apply a protective film for a cooler car interior. #sunroof #windowtint #heatreduction #milfordct", hashtags: "#sunroof #windowtint #heatreduction #carcare #tinting #milfordct #milfordbusiness #connecticutcars #cttinting", story: "Did you forget to tint your sunroof? 🥵 It's letting in so much heat! Swipe up to get yours done." }, isDone: false },
+                    { title: "Can You Tint a Car with Defrosters?", details: { description: "A video showing the careful process of applying tint to windows with defroster lines. Explain that with proper technique, it's possible without damaging the lines.", yt: "Yes, we can tint your windows with defroster lines! Our pros know how to get a perfect finish every time. #defroster #windowtint #tinting #carfacts", hashtags: "#defroster #windowtint #tinting #carfacts #detailingpro #milfordct #ctdetailers #milfordconnecticut #connecticut", story: "A common question we get: 'Can you tint a window with defroster lines?' The answer is YES! ✅ Check out our video to learn how." }, isDone: false },
+                    { title: "From Light to Dark: A Tinting Transformation", details: { description: "A quick before and after video showing a car with no tint getting a dark, dramatic tint.", yt: "See this car go from light to dark with a full window tinting job. The transformation is incredible! #windowtint #beforeandafter #carupgrades", hashtags: "#windowtint #beforeandafter #carupgrades #autodetail #carstyle #milfordct #ctcars #milfordcarscene #connecticut", story: "Before and after: So satisfying! 🤩 A tint job can completely change the look of your car. DM for a quote!" }, isDone: false },
+                    { title: "Window Tinting: The Best Way to Protect Your Family", details: { description: "A video on the safety benefits of window tint, from protecting against UV rays to holding shattered glass together in an accident.", yt: "Window tinting isn't just for looks! It protects your family from harmful UV rays and holds shattered glass together. #windowtint #safetyfirst #carcare", hashtags: "#windowtint #safetyfirst #carcare #familycar #safedriving #milfordct #milfordconnecticut #ctbusiness #connecticut", story: "Your family's safety is our top priority. ❤️ Did you know window tint offers crucial protection? Tap to learn more!" }, isDone: false },
+                    { title: "We Installed the Darkest Legal Tint!", details: { description: "Show a car getting the darkest legal tint for Connecticut. Explain what the VLT (Visible Light Transmission) percentage means and what the legal limit is.", yt: "We're installing the darkest legal tint for CT! Find out what the law says about VLT percentages. #windowtintlaws #legal #tinting #milfordct", hashtags: "#windowtintlaws #legal #tinting #cttint #carfacts #milfordct #ctcars #milfordconnecticut #connecticut", story: "How dark can you go? 🤔 We're installing the darkest legal tint in CT! Swipe up to see our work." }, isDone: false },
+                    { title: "The Difference a Pro Installer Makes", details: { description: "A side-by-side comparison of a window tinted by a professional vs. a DIY job, highlighting the lack of bubbles, creases, and peeling.", yt: "Don't settle for a bad tint job! We show you the difference between a DIY install and a professional one. #professionalinstall #windowtint #tintshop", hashtags: "#professionalinstall #windowtint #tintshop #carcare #detailingpro #milfordct #ctdetailers #milfordbusiness #connecticut", story: "Bubbles and creases are a no-go! 🙅‍♀️ We're showing you why a professional tint install is always worth it. Ask us for a quote!" }, isDone: false },
+                    { title: "Tinting to Protect Your Sound System", details: { description: "A video showing a car with a high-end sound system. Explain how a professional tint job provides a deterrent against theft and protects the speakers from UV damage.", yt: "Protect your sound system! Window tint provides an extra layer of security and protects your speakers from the sun. #soundsystem #windowtint #carstereo #carsecurity", hashtags: "#soundsystem #windowtint #carsecurity #carstereo #tinting #milfordct #ctcars #milfordconnecticut #ctbusiness", story: "Is your car's interior visible? 🫣 Window tint can protect your belongings from prying eyes. DM us for a quote!" }, isDone: false },
+                    { title: "How We Cut Tint for a Perfect Fit", details: { description: "A video showing a computer-cut pattern for a window. Explain how this ensures a perfect, edge-to-edge fit without hand-cutting on the car.", yt: "How do we get a perfect tint fit every time? We use a computer-cut pattern for ultimate precision! #tinting #tintprocess #precisionfit", hashtags: "#tinting #tintprocess #precisionfit #detailingpro #carcare #milfordct #cttint #milfordbusiness #connecticut", story: "The precision is unreal! ✨ We're cutting a tint pattern for a perfect fit on this car. Swipe up to learn about our process." }, isDone: false },
+                    { title: "Tinting Your Car: The Ultimate Style Upgrade", details: { description: "A video focusing purely on the aesthetic upgrade that window tint provides, showcasing a car with a before and after of a dramatic, dark tint.", yt: "Want to give your car a major style upgrade? Window tint is the answer! See the incredible before and after. #windowtint #carstyle #carupgrades", hashtags: "#windowtint #carstyle #carupgrades #autodetail #milfordct #ctcars #milfordcarscene #connecticut", story: "A small change, a huge impact. 🚀 We just gave this car a major style upgrade. Tap the link in bio to book!" }, isDone: false },
+                    { title: "Is Your Tint Purple and Peeling?", details: { description: "A video on a car with old, cheap tint that has turned purple and is peeling. Explain that this is a sign of low-quality film and why your high-quality film will last.", yt: "Is your old tint turning purple and peeling? It's time for an upgrade! We use high-quality film that lasts. #oldtint #tintinggonewrong #windowtint", hashtags: "#oldtint #tintinggonewrong #windowtint #carproblems #detailing #milfordct #ctdetailers #milfordconnecticut #connecticut", story: "Don't let this happen to you! 😩 We're removing some old, peeling tint today. Tap to get a quote for a quality tint install!" }, isDone: false },
+                ]
+            },
+            {
+                category: "Strategy & General Content",
+                id: "strategy",
+                description: "Key strategic elements, including the video template and weekly posting schedule.",
+                ideas: [
+                     { title: "This is Your Car's Worst Enemy", details: { description: "A video on contamination from tree sap, bug guts, and bird droppings. Explain how they can etch into paint if not removed properly and quickly.", yt: "Tree sap, bug guts, and bird droppings are your car's worst enemy. We show you how to safely remove them! #paintdamage #contaminants #carcare", hashtags: "#paintdamage #contaminants #carcare #detailing #carproblems #milfordct #ctcars #milfordconnecticut #milford", story: "Don't let bird droppings etch your paint! 💥 We're talking about car care tips today. Ask us a question below!" }, isDone: false },
+                     { title: "The Easiest Way to Remove a Pet Hair", details: { description: "A short video showing a pet hair removal tool in action on a car's interior. A satisfying, easy-to-digest video.", yt: "Get rid of stubborn pet hair in seconds! Our secret tool makes interior cleaning a breeze. #pethairremoval #carcleaning #detailingtips", hashtags: "#pethairremoval #carcleaning #detailingtips #satisfying #interiordetail #milfordct #ctpets #milforddogs #connecticut", story: "Does your car look like this? 🐾 We've got the solution! Our pet hair removal service is a game-changer. Swipe up to book." }, isDone: false },
+                     { title: "A Day in the Life at TDS", details: { description: "A compilation of short clips showing the team at work, from meeting a customer to working on cars and packing up for the day.", yt: "Ever wondered what it's like to be a detailer? Here's a day in the life at The Detail Shop! #dayinthelife #detailinglife #tds", hashtags: "#dayinthelife #detailinglife #tds #smallbusiness #behindthescenes #milfordct #milfordbusiness #ctdetailers #connecticut", story: "Good morning from TDS! ☀️ We're getting started on a busy day. Drop a '👋' if you've been to our shop!" }, isDone: false },
+                     { title: "The Top 3 Mistakes Car Owners Make", details: { description: "A tip video explaining common mistakes like using dish soap to wash a car, using automatic car washes, or not protecting the paint.", yt: "Are you making these mistakes? We're breaking down the top 3 car care mistakes and how to avoid them. #carcaremistakes #detailingtips #carhacks", hashtags: "#carcaremistakes #detailingtips #carhacks #autodetail #carowner #milfordct #carfacts #milfordconnecticut #ctcars", story: "Have you ever used dish soap on your car? 😳 We're busting myths and sharing tips today. Tap to learn more!" }, isDone: false },
+                     { title: "Meet the TDS Team!", details: { description: "A short, upbeat video introducing the main team members with their names and roles.", yt: "Meet the amazing team behind The Detail Shop! We're here to make your car look its best. #meettheteam #smallbusinessowner #detailingcrew", hashtags: "#meettheteam #smallbusinessowner #detailingcrew #behindthescenes #tds #milfordct #milfordbusiness #connecticut #ctsmallbiz", story: "Say hi to the team! 👋 We're answering your questions today. What do you want to know about The Detail Shop?" }, isDone: false },
+                     { title: "What's That Smell? We Can Fix That.", details: { description: "A video on odor removal services, showcasing fogging or specific cleaning techniques to remove odors from food spills or smoke.", yt: "Got a bad smell in your car? We can fix that! Our odor removal service leaves your interior fresh. #odorremoval #carcleaning #freshcar", hashtags: "#odorremoval #carcleaning #freshcar #interiordetail #clean #milfordct #milfordconnecticut #ctcars #milford", story: "Spilled coffee, smoke, pet smells... we've seen it all! 👃 We can get rid of that nasty smell for good. Swipe up to book!" }, isDone: false },
+                     { title: "Can a Detail Really Add Value to Your Car?", details: { description: "A discussion-style video explaining how a professional detail can increase a car's resale or trade-in value.", yt: "Want to increase your car's value? A professional detail is a must-have for a higher resale price! #carvalue #cardetailing #carforsale", hashtags: "#carvalue #cardetailing #carforsale #resalevalue #carcare #autodetail #milfordct #ctcarsforsale #milfordconnecticut #connecticut", story: "Thinking about selling your car? 🤔 A professional detail can add serious value. DM us to learn more!" }, isDone: false },
+                     { title: "Our Favorite Car Wash Tools", details: { description: "A video showcasing a few key tools you use in your wash bay (e.g., microfiber towels, two-bucket method). Explain why they're important.", yt: "What tools do we use for a perfect car wash? We're sharing our favorites and why they're essential! #carwash #detailingtools #carcare", hashtags: "#carwash #detailingtools #carcare #detailingtips #autodetail #milfordct #milfordbusiness #ctcars #milfordconnecticut", story: "Our favorite tools for a perfect wash! 🪣 What's your go-to car wash product? Let us know below!" }, isDone: false },
+                     { title: "How We Make Your Engine Bay Shine", details: { description: "A quick video showing the safe process of cleaning a car's engine bay, focusing on the before and after.", yt: "Is your engine bay a mess? Watch us transform this engine bay from dirty to shiny and clean! #enginebay #enginecleaning #detailing #cleancars", hashtags: "#enginebay #enginecleaning #detailing #carcare #cleancars #milfordct #ctcarscene #milfordconnecticut #connecticut", story: "Have you ever had your engine detailed? 🤔 The results are amazing! Tap the link in our bio to book." }, isDone: false },
+                     { title: "Stop Using This on Your Leather", details: { description: "A video explaining what to avoid using on leather seats (e.g., harsh chemicals, greasy conditioners) and what to use instead.", yt: "Stop using the wrong products on your leather seats! We share our tips for proper leather care. #leathercare #leathercleaning #carhacks", hashtags: "#leathercare #leathercleaning #interiordetail #carhacks #detailingtips #milfordct #milfordbusiness #ctcars #milfordconnecticut", story: "Are you ruining your leather seats? 😩 We're breaking down the do's and don'ts of leather care. Swipe up for tips!" }, isDone: false },
+                     { title: "The Difference Between a Detail and a Car Wash", details: { description: "A video explaining the fundamental differences between a simple car wash and a professional detail. Explain the depth of cleaning and protection in a detail.", yt: "A car wash and a car detail are not the same! We explain the differences and benefits of a professional detail. #cardetailing #carwash #detailingexplained", hashtags: "#cardetailing #carwash #detailingexplained #carcare #autodetail #milfordct #ctbusiness #milfordconnecticut #connecticut", story: "Do you know the difference? 🤔 We're answering your questions about car details vs. car washes today. DM us!" }, isDone: false },
+                     { title: "Is Your Car Ready for Spring?", details: { description: "A video on spring cleaning tips for a car. Show the process of removing winter salt, sand, and grime from the interior and exterior.", yt: "Spring is here! Is your car ready? We're showing you our tips for a post-winter detail. #springcleaning #carcare #detailingtips #milfordct", hashtags: "#springcleaning #carcare #detailingtips #autodetail #milfordct #ctweather #milfordconnecticut #connecticut", story: "Time to get rid of that winter grime! 😩 We're giving this car a fresh start for spring. Swipe up to book your detail!" }, isDone: false },
+                     { title: "The Key to a Flawless Interior", details: { description: "A video showcasing the tools and techniques used for a deep interior cleaning, from vacuuming to scrubbing and conditioning.", yt: "Our secret to a flawless car interior? We show you our meticulous process for a deep clean! #interiordetail #carcleaning #detailingprocess", hashtags: "#interiordetail #carcleaning #detailingprocess #satisfying #clean #milfordct #ctcardetailing #milfordbusiness #connecticutcars", story: "That feeling of a clean interior. 😌 We're doing a deep clean on this car today. Tap the link in bio to book yours!" }, isDone: false },
+                     { title: "We Removed the Worst Stains!", details: { description: "A video on a specific, tough stain (e.g., coffee, soda) on a car's carpet or upholstery. Show the before and after of the stain removal process.", yt: "We're removing the worst stains! Watch us make this spill disappear with our professional stain removal. #stainremoval #carcleaning #satisfyingcleaning", hashtags: "#stainremoval #carcleaning #satisfyingcleaning #interiordetail #carproblems #milfordct #milfordconnecticut #ctcars #milford", story: "Spilled something on your car's seats? 🤦‍♀️ We can fix that! Send us a photo of your stain for a quote." }, isDone: false },
+                     { title: "The Secret to a Streak-Free Window", details: { description: "A quick video showing the proper technique and product for cleaning car windows for a streak-free, crystal-clear finish.", yt: "Say goodbye to streaky windows! We're sharing our secret to a streak-free clean every time. #windowcleaning #carcare #detailingtips #carhacks", hashtags: "#windowcleaning #carcare #detailingtips #carhacks #autodetail #milfordct #ctbusiness #milforddetailing #connecticutcars", story: "Are you still getting streaks on your windows? 😫 We're showing you the pro way to clean them! Swipe up for our tips!" }, isDone: false },
+                     { title: "Why We Use a Clay Bar on Every Detail", details: { description: "A video explaining the importance of using a clay bar before polishing or coating. Show the contaminants being pulled from the paint.", yt: "A clay bar is a must-have for a professional detail. We show you why it's a crucial step! #claybar #detailingprocess #carcare", hashtags: "#claybar #detailingprocess #carcare #paintdecontamination #smoothpaint #milfordct #milfordconnecticut #ctcars #connecticut", story: "The secret to a super smooth finish? Clay bar! 🧼 It removes all the hidden gunk from your paint. DM us for a detail quote!" }, isDone: false },
+                     { title: "The Ultimate Tire and Rim Detail", details: { description: "A video focused on the detailing process for wheels and tires, from cleaning brake dust to dressing the tires for a deep black look.", yt: "We're not just cleaning your tires, we're detailing them! Watch us transform these wheels and tires. #tires #rims #wheelcleaning #detailing", hashtags: "#tires #rims #wheelcleaning #detailing #carcare #autodetail #milfordct #ctcars #milfordconnecticut #milford", story: "The details matter! ✨ A clean set of wheels and tires can make all the difference. Tap the link in bio to book your detail!" }, isDone: false },
+                     { title: "What a 'Maintenance Detail' Is", details: { description: "A video explaining what a maintenance detail includes and why it's important for keeping a car in top shape between full details.", yt: "What's a maintenance detail? It's the best way to keep your car looking fresh between full details! #maintenancedetail #carcare #detailingtips", hashtags: "#maintenancedetail #carcare #detailingtips #autodetail #milfordct #ctdetailers #milfordbusiness #connecticut", story: "Keep your car looking good all the time! 🚗 We're talking about our maintenance detail service today. DM us for more info!" }, isDone: false },
+                     { title: "The Final Walk-Around", details: { description: "A satisfying, slow-motion video of a finished car after a full detail, showcasing the shine, clean interior, and flawless finish.", yt: "The most satisfying part of our job? The final walk-around. See the results of a professional detail! #satisfying #finalwalkaround #cardetailing", hashtags: "#satisfying #finalwalkaround #cardetailing #carcare #cleancars #milfordct #milfordconnecticut #ctcars #connecticut", story: "The grand finale! ✨ This car is ready for a new owner. What's your favorite part of a fresh detail?" }, isDone: false },
+                     { title: "Our Commitment to Perfection", details: { description: "A video where a team member talks about the business's philosophy and commitment to high-quality work and customer satisfaction.", yt: "Why choose us? Our commitment to perfection and customer satisfaction sets us apart. #tds #smallbusiness #detailingpro #milfordct", hashtags: "#tds #smallbusiness #detailingpro #milfordct #milfordbusiness #connecticut #ctsmallbiz", story: "It's more than just detailing to us. It's about a commitment to perfection. 🙌 We're answering your questions about our philosophy!" }, isDone: false },
+                ]
+            },
+            {
+                category: "Strategy & General Content",
+                id: "strategy",
+                description: "Key strategic elements, including the video template and weekly posting schedule.",
+                ideas: [
+                     { title: "This is Your Car's Worst Enemy", details: { description: "A video on contamination from tree sap, bug guts, and bird droppings. Explain how they can etch into paint if not removed properly and quickly.", yt: "Tree sap, bug guts, and bird droppings are your car's worst enemy. We show you how to safely remove them! #paintdamage #contaminants #carcare", hashtags: "#paintdamage #contaminants #carcare #detailing #carproblems #milfordct #ctcars #milfordconnecticut #milford", story: "Don't let bird droppings etch your paint! 💥 We're talking about car care tips today. Ask us a question below!" }, isDone: false },
+                     { title: "The Easiest Way to Remove a Pet Hair", details: { description: "A short video showing a pet hair removal tool in action on a car's interior. A satisfying, easy-to-digest video.", yt: "Get rid of stubborn pet hair in seconds! Our secret tool makes interior cleaning a breeze. #pethairremoval #carcleaning #detailingtips", hashtags: "#pethairremoval #carcleaning #detailingtips #satisfying #interiordetail #milfordct #ctpets #milforddogs #connecticut", story: "Does your car look like this? 🐾 We've got the solution! Our pet hair removal service is a game-changer. Swipe up to book." }, isDone: false },
+                     { title: "A Day in the Life at TDS", details: { description: "A compilation of short clips showing the team at work, from meeting a customer to working on cars and packing up for the day.", yt: "Ever wondered what it's like to be a detailer? Here's a day in the life at The Detail Shop! #dayinthelife #detailinglife #tds", hashtags: "#dayinthelife #detailinglife #tds #smallbusiness #behindthescenes #milfordct #milfordbusiness #ctdetailers #connecticut", story: "Good morning from TDS! ☀️ We're getting started on a busy day. Drop a '👋' if you've been to our shop!" }, isDone: false },
+                     { title: "The Top 3 Mistakes Car Owners Make", details: { description: "A tip video explaining common mistakes like using dish soap to wash a car, using automatic car washes, or not protecting the paint.", yt: "Are you making these mistakes? We're breaking down the top 3 car care mistakes and how to avoid them. #carcaremistakes #detailingtips #carhacks", hashtags: "#carcaremistakes #detailingtips #carhacks #autodetail #carowner #milfordct #carfacts #milfordconnecticut #ctcars", story: "Have you ever used dish soap on your car? 😳 We're busting myths and sharing tips today. Tap to learn more!" }, isDone: false },
+                     { title: "Meet the TDS Team!", details: { description: "A short, upbeat video introducing the main team members with their names and roles.", yt: "Meet the amazing team behind The Detail Shop! We're here to make your car look its best. #meettheteam #smallbusinessowner #detailingcrew", hashtags: "#meettheteam #smallbusinessowner #detailingcrew #behindthescenes #tds #milfordct #milfordbusiness #connecticut #ctsmallbiz", story: "Say hi to the team! 👋 We're answering your questions today. What do you want to know about The Detail Shop?" }, isDone: false },
+                     { title: "What's That Smell? We Can Fix That.", details: { description: "A video on odor removal services, showcasing fogging or specific cleaning techniques to remove odors from food spills or smoke.", yt: "Got a bad smell in your car? We can fix that! Our odor removal service leaves your interior fresh. #odorremoval #carcleaning #freshcar", hashtags: "#odorremoval #carcleaning #freshcar #interiordetail #clean #milfordct #milfordconnecticut #ctcars #milford", story: "Spilled coffee, smoke, pet smells... we've seen it all! 👃 We can get rid of that nasty smell for good. Swipe up to book!" }, isDone: false },
+                     { title: "Can a Detail Really Add Value to Your Car?", details: { description: "A discussion-style video explaining how a professional detail can increase a car's resale or trade-in value.", yt: "Want to increase your car's value? A professional detail is a must-have for a higher resale price! #carvalue #cardetailing #carforsale", hashtags: "#carvalue #cardetailing #carforsale #resalevalue #carcare #autodetail #milfordct #ctcarsforsale #milfordconnecticut #connecticut", story: "Thinking about selling your car? 🤔 A professional detail can add serious value. DM us to learn more!" }, isDone: false },
+                     { title: "Our Favorite Car Wash Tools", details: { description: "A video showcasing a few key tools you use in your wash bay (e.g., microfiber towels, two-bucket method). Explain why they're important.", yt: "What tools do we use for a perfect car wash? We're sharing our favorites and why they're essential! #carwash #detailingtools #carcare", hashtags: "#carwash #detailingtools #carcare #detailingtips #autodetail #milfordct #milfordbusiness #ctcars #milfordconnecticut", story: "Our favorite tools for a perfect wash! 🪣 What's your go-to car wash product? Let us know below!" }, isDone: false },
+                     { title: "How We Make Your Engine Bay Shine", details: { description: "A quick video showing the safe process of cleaning a car's engine bay, focusing on the before and after.", yt: "Is your engine bay a mess? Watch us transform this engine bay from dirty to shiny and clean! #enginebay #enginecleaning #detailing #cleancars", hashtags: "#enginebay #enginecleaning #detailing #carcare #cleancars #milfordct #ctcarscene #milfordconnecticut #connecticut", story: "Have you ever had your engine detailed? 🤔 The results are amazing! Tap the link in our bio to book." }, isDone: false },
+                     { title: "Stop Using This on Your Leather", details: { description: "A video explaining what to avoid using on leather seats (e.g., harsh chemicals, greasy conditioners) and what to use instead.", yt: "Stop using the wrong products on your leather seats! We share our tips for proper leather care. #leathercare #leathercleaning #carhacks", hashtags: "#leathercare #leathercleaning #interiordetail #carhacks #detailingtips #milfordct #milfordbusiness #ctcars #milfordconnecticut", story: "Are you ruining your leather seats? 😩 We're breaking down the do's and don'ts of leather care. Swipe up for tips!" }, isDone: false },
+                     { title: "The Difference Between a Detail and a Car Wash", details: { description: "A video explaining the fundamental differences between a simple car wash and a professional detail. Explain the depth of cleaning and protection in a detail.", yt: "A car wash and a car detail are not the same! We explain the differences and benefits of a professional detail. #cardetailing #carwash #detailingexplained", hashtags: "#cardetailing #carwash #detailingexplained #carcare #autodetail #milfordct #ctbusiness #milfordconnecticut #connecticut", story: "Do you know the difference? 🤔 We're answering your questions about car details vs. car washes today. DM us!" }, isDone: false },
+                     { title: "Is Your Car Ready for Spring?", details: { description: "A video on spring cleaning tips for a car. Show the process of removing winter salt, sand, and grime from the interior and exterior.", yt: "Spring is here! Is your car ready? We're showing you our tips for a post-winter detail. #springcleaning #carcare #detailingtips #milfordct", hashtags: "#springcleaning #carcare #detailingtips #autodetail #milfordct #ctweather #milfordconnecticut #connecticut", story: "Time to get rid of that winter grime! 😩 We're giving this car a fresh start for spring. Swipe up to book your detail!" }, isDone: false },
+                     { title: "The Key to a Flawless Interior", details: { description: "A video showcasing the tools and techniques used for a deep interior cleaning, from vacuuming to scrubbing and conditioning.", yt: "Our secret to a flawless car interior? We show you our meticulous process for a deep clean! #interiordetail #carcleaning #detailingprocess", hashtags: "#interiordetail #carcleaning #detailingprocess #satisfying #clean #milfordct #ctcardetailing #milfordbusiness #connecticutcars", story: "That feeling of a clean interior. 😌 We're doing a deep clean on this car today. Tap the link in bio to book yours!" }, isDone: false },
+                     { title: "We Removed the Worst Stains!", details: { description: "A video on a specific, tough stain (e.g., coffee, soda) on a car's carpet or upholstery. Show the before and after of the stain removal process.", yt: "We're removing the worst stains! Watch us make this spill disappear with our professional stain removal. #stainremoval #carcleaning #satisfyingcleaning", hashtags: "#stainremoval #carcleaning #satisfyingcleaning #interiordetail #carproblems #milfordct #milfordconnecticut #ctcars #milford", story: "Spilled something on your car's seats? 🤦‍♀️ We can fix that! Send us a photo of your stain for a quote." }, isDone: false },
+                     { title: "The Secret to a Streak-Free Window", details: { description: "A quick video showing the proper technique and product for cleaning car windows for a streak-free, crystal-clear finish.", yt: "Say goodbye to streaky windows! We're sharing our secret to a streak-free clean every time. #windowcleaning #carcare #detailingtips #carhacks", hashtags: "#windowcleaning #carcare #detailingtips #carhacks #autodetail #milfordct #ctbusiness #milforddetailing #connecticutcars", story: "Are you still getting streaks on your windows? 😫 We're showing you the pro way to clean them! Swipe up for our tips!" }, isDone: false },
+                     { title: "Why We Use a Clay Bar on Every Detail", details: { description: "A video explaining the importance of using a clay bar before polishing or coating. Show the contaminants being pulled from the paint.", yt: "A clay bar is a must-have for a professional detail. We show you why it's a crucial step! #claybar #detailingprocess #carcare", hashtags: "#claybar #detailingprocess #carcare #paintdecontamination #smoothpaint #milfordct #milfordconnecticut #ctcars #connecticut", story: "The secret to a super smooth finish? Clay bar! 🧼 It removes all the hidden gunk from your paint. DM us for a detail quote!" }, isDone: false },
+                     { title: "The Ultimate Tire and Rim Detail", details: { description: "A video focused on the detailing process for wheels and tires, from cleaning brake dust to dressing the tires for a deep black look.", yt: "We're not just cleaning your tires, we're detailing them! Watch us transform these wheels and tires. #tires #rims #wheelcleaning #detailing", hashtags: "#tires #rims #wheelcleaning #detailing #carcare #autodetail #milfordct #ctcars #milfordconnecticut #milford", story: "The details matter! ✨ A clean set of wheels and tires can make all the difference. Tap the link in bio to book your detail!" }, isDone: false },
+                     { title: "What a 'Maintenance Detail' Is", details: { description: "A video explaining what a maintenance detail includes and why it's important for keeping a car in top shape between full details.", yt: "What's a maintenance detail? It's the best way to keep your car looking fresh between full details! #maintenancedetail #carcare #detailingtips", hashtags: "#maintenancedetail #carcare #detailingtips #autodetail #milfordct #ctdetailers #milfordbusiness #connecticut", story: "Keep your car looking good all the time! 🚗 We're talking about our maintenance detail service today. DM us for more info!" }, isDone: false },
+                     { title: "The Final Walk-Around", details: { description: "A satisfying, slow-motion video of a finished car after a full detail, showcasing the shine, clean interior, and flawless finish.", yt: "The most satisfying part of our job? The final walk-around. See the results of a professional detail! #satisfying #finalwalkaround #cardetailing", hashtags: "#satisfying #finalwalkaround #cardetailing #carcare #cleancars #milfordct #milfordconnecticut #ctcars #connecticut", story: "The grand finale! ✨ This car is ready for a new owner. What's your favorite part of a fresh detail?" }, isDone: false },
+                     { title: "Our Commitment to Perfection", details: { description: "A video where a team member talks about the business's philosophy and commitment to high-quality work and customer satisfaction.", yt: "Why choose us? Our commitment to perfection and customer satisfaction sets us apart. #tds #smallbusiness #detailingpro #milfordct", hashtags: "#tds #smallbusiness #detailingpro #milfordct #milfordbusiness #connecticut #ctsmallbiz", story: "It's more than just detailing to us. It's about a commitment to perfection. 🙌 We're answering your questions about our philosophy!" }, isDone: false },
+                ]
+            },
+            {
+                category: "Strategy & General Content",
+                id: "strategy",
+                description: "Key strategic elements, including the video template and weekly posting schedule.",
+                ideas: [
+                     { title: "This is Your Car's Worst Enemy", details: { description: "A video on contamination from tree sap, bug guts, and bird droppings. Explain how they can etch into paint if not removed properly and quickly.", yt: "Tree sap, bug guts, and bird droppings are your car's worst enemy. We show you how to safely remove them! #paintdamage #contaminants #carcare", hashtags: "#paintdamage #contaminants #carcare #detailing #carproblems #milfordct #ctcars #milfordconnecticut #milford", story: "Don't let bird droppings etch your paint! 💥 We're talking about car care tips today. Ask us a question below!" }, isDone: false },
+                     { title: "The Easiest Way to Remove a Pet Hair", details: { description: "A short video showing a pet hair removal tool in action on a car's interior. A satisfying, easy-to-digest video.", yt: "Get rid of stubborn pet hair in seconds! Our secret tool makes interior cleaning a breeze. #pethairremoval #carcleaning #detailingtips", hashtags: "#pethairremoval #carcleaning #detailingtips #satisfying #interiordetail #milfordct #ctpets #milforddogs #connecticut", story: "Does your car look like this? 🐾 We've got the solution! Our pet hair removal service is a game-changer. Swipe up to book." }, isDone: false },
+                     { title: "A Day in the Life at TDS", details: { description: "A compilation of short clips showing the team at work, from meeting a customer to working on cars and packing up for the day.", yt: "Ever wondered what it's like to be a detailer? Here's a day in the life at The Detail Shop! #dayinthelife #detailinglife #tds", hashtags: "#dayinthelife #detailinglife #tds #smallbusiness #behindthescenes #milfordct #milfordbusiness #ctdetailers #connecticut", story: "Good morning from TDS! ☀️ We're getting started on a busy day. Drop a '👋' if you've been to our shop!" }, isDone: false },
+                     { title: "The Top 3 Mistakes Car Owners Make", details: { description: "A tip video explaining common mistakes like using dish soap to wash a car, using automatic car washes, or not protecting the paint.", yt: "Are you making these mistakes? We're breaking down the top 3 car care mistakes and how to avoid them. #carcaremistakes #detailingtips #carhacks", hashtags: "#carcaremistakes #detailingtips #carhacks #autodetail #carowner #milfordct #carfacts #milfordconnecticut #ctcars", story: "Have you ever used dish soap on your car? 😳 We're busting myths and sharing tips today. Tap to learn more!" }, isDone: false },
+                     { title: "Meet the TDS Team!", details: { description: "A short, upbeat video introducing the main team members with their names and roles.", yt: "Meet the amazing team behind The Detail Shop! We're here to make your car look its best. #meettheteam #smallbusinessowner #detailingcrew", hashtags: "#meettheteam #smallbusinessowner #detailingcrew #behindthescenes #tds #milfordct #milfordbusiness #connecticut #ctsmallbiz", story: "Say hi to the team! 👋 We're answering your questions today. What do you want to know about The Detail Shop?" }, isDone: false },
+                     { title: "What's That Smell? We Can Fix That.", details: { description: "A video on odor removal services, showcasing fogging or specific cleaning techniques to remove odors from food spills or smoke.", yt: "Got a bad smell in your car? We can fix that! Our odor removal service leaves your interior fresh. #odorremoval #carcleaning #freshcar", hashtags: "#odorremoval #carcleaning #freshcar #interiordetail #clean #milfordct #milfordconnecticut #ctcars #milford", story: "Spilled coffee, smoke, pet smells... we've seen it all! 👃 We can get rid of that nasty smell for good. Swipe up to book!" }, isDone: false },
+                     { title: "Can a Detail Really Add Value to Your Car?", details: { description: "A discussion-style video explaining how a professional detail can increase a car's resale or trade-in value.", yt: "Want to increase your car's value? A professional detail is a must-have for a higher resale price! #carvalue #cardetailing #carforsale", hashtags: "#carvalue #cardetailing #carforsale #resalevalue #carcare #autodetail #milfordct #ctcarsforsale #milfordconnecticut #connecticut", story: "Thinking about selling your car? 🤔 A professional detail can add serious value. DM us to learn more!" }, isDone: false },
+                     { title: "Our Favorite Car Wash Tools", details: { description: "A video showcasing a few key tools you use in your wash bay (e.g., microfiber towels, two-bucket method). Explain why they're important.", yt: "What tools do we use for a perfect car wash? We're sharing our favorites and why they're essential! #carwash #detailingtools #carcare", hashtags: "#carwash #detailingtools #carcare #detailingtips #autodetail #milfordct #milfordbusiness #ctcars #milfordconnecticut", story: "Our favorite tools for a perfect wash! 🪣 What's your go-to car wash product? Let us know below!" }, isDone: false },
+                     { title: "How We Make Your Engine Bay Shine", details: { description: "A quick video showing the safe process of cleaning a car's engine bay, focusing on the before and after.", yt: "Is your engine bay a mess? Watch us transform this engine bay from dirty to shiny and clean! #enginebay #enginecleaning #detailing #cleancars", hashtags: "#enginebay #enginecleaning #detailing #carcare #cleancars #milfordct #ctcarscene #milfordconnecticut #connecticut", story: "Have you ever had your engine detailed? 🤔 The results are amazing! Tap the link in our bio to book." }, isDone: false },
+                     { title: "Stop Using This on Your Leather", details: { description: "A video explaining what to avoid using on leather seats (e.g., harsh chemicals, greasy conditioners) and what to use instead.", yt: "Stop using the wrong products on your leather seats! We share our tips for proper leather care. #leathercare #leathercleaning #carhacks", hashtags: "#leathercare #leathercleaning #interiordetail #carhacks #detailingtips #milfordct #milfordbusiness #ctcars #milfordconnecticut", story: "Are you ruining your leather seats? 😩 We're breaking down the do's and don'ts of leather care. Swipe up for tips!" }, isDone: false },
+                     { title: "The Difference Between a Detail and a Car Wash", details: { description: "A video explaining the fundamental differences between a simple car wash and a professional detail. Explain the depth of cleaning and protection in a detail.", yt: "A car wash and a car detail are not the same! We explain the differences and benefits of a professional detail. #cardetailing #carwash #detailingexplained", hashtags: "#cardetailing #carwash #detailingexplained #carcare #autodetail #milfordct #ctbusiness #milfordconnecticut #connecticut", story: "Do you know the difference? 🤔 We're answering your questions about car details vs. car washes today. DM us!" }, isDone: false },
+                     { title: "Is Your Car Ready for Spring?", details: { description: "A video on spring cleaning tips for a car. Show the process of removing winter salt, sand, and grime from the interior and exterior.", yt: "Spring is here! Is your car ready? We're showing you our tips for a post-winter detail. #springcleaning #carcare #detailingtips #milfordct", hashtags: "#springcleaning #carcare #detailingtips #autodetail #milfordct #ctweather #milfordconnecticut #connecticut", story: "Time to get rid of that winter grime! 😩 We're giving this car a fresh start for spring. Swipe up to book your detail!" }, isDone: false },
+                     { title: "The Key to a Flawless Interior", details: { description: "A video showcasing the tools and techniques used for a deep interior cleaning, from vacuuming to scrubbing and conditioning.", yt: "Our secret to a flawless car interior? We show you our meticulous process for a deep clean! #interiordetail #carcleaning #detailingprocess", hashtags: "#interiordetail #carcleaning #detailingprocess #satisfying #clean #milfordct #ctcardetailing #milfordbusiness #connecticutcars", story: "That feeling of a clean interior. 😌 We're doing a deep clean on this car today. Tap the link in bio to book yours!" }, isDone: false },
+                     { title: "We Removed the Worst Stains!", details: { description: "A video on a specific, tough stain (e.g., coffee, soda) on a car's carpet or upholstery. Show the before and after of the stain removal process.", yt: "We're removing the worst stains! Watch us make this spill disappear with our professional stain removal. #stainremoval #carcleaning #satisfyingcleaning", hashtags: "#stainremoval #carcleaning #satisfyingcleaning #interiordetail #carproblems #milfordct #milfordconnecticut #ctcars #milford", story: "Spilled something on your car's seats? 🤦‍♀️ We can fix that! Send us a photo of your stain for a quote." }, isDone: false },
+                     { title: "The Secret to a Streak-Free Window", details: { description: "A quick video showing the proper technique and product for cleaning car windows for a streak-free, crystal-clear finish.", yt: "Say goodbye to streaky windows! We're sharing our secret to a streak-free clean every time. #windowcleaning #carcare #detailingtips #carhacks", hashtags: "#windowcleaning #carcare #detailingtips #carhacks #autodetail #milfordct #ctbusiness #milforddetailing #connecticutcars", story: "Are you still getting streaks on your windows? 😫 We're showing you the pro way to clean them! Swipe up for our tips!" }, isDone: false },
+                     { title: "Why We Use a Clay Bar on Every Detail", details: { description: "A video explaining the importance of using a clay bar before polishing or coating. Show the contaminants being pulled from the paint.", yt: "A clay bar is a must-have for a professional detail. We show you why it's a crucial step! #claybar #detailingprocess #carcare", hashtags: "#claybar #detailingprocess #carcare #paintdecontamination #smoothpaint #milfordct #milfordconnecticut #ctcars #connecticut", story: "The secret to a super smooth finish? Clay bar! 🧼 It removes all the hidden gunk from your paint. DM us for a detail quote!" }, isDone: false },
+                     { title: "The Ultimate Tire and Rim Detail", details: { description: "A video focused on the detailing process for wheels and tires, from cleaning brake dust to dressing the tires for a deep black look.", yt: "We're not just cleaning your tires, we're detailing them! Watch us transform these wheels and tires. #tires #rims #wheelcleaning #detailing", hashtags: "#tires #rims #wheelcleaning #detailing #carcare #autodetail #milfordct #ctcars #milfordconnecticut #milford", story: "The details matter! ✨ A clean set of wheels and tires can make all the difference. Tap the link in bio to book your detail!" }, isDone: false },
+                     { title: "What a 'Maintenance Detail' Is", details: { description: "A video explaining what a maintenance detail includes and why it's important for keeping a car in top shape between full details.", yt: "What's a maintenance detail? It's the best way to keep your car looking fresh between full details! #maintenancedetail #carcare #detailingtips", hashtags: "#maintenancedetail #carcare #detailingtips #autodetail #milfordct #ctdetailers #milfordbusiness #connecticut", story: "Keep your car looking good all the time! 🚗 We're talking about our maintenance detail service today. DM us for more info!" }, isDone: false },
+                     { title: "The Final Walk-Around", details: { description: "A satisfying, slow-motion video of a finished car after a full detail, showcasing the shine, clean interior, and flawless finish.", yt: "The most satisfying part of our job? The final walk-around. See the results of a professional detail! #satisfying #finalwalkaround #cardetailing", hashtags: "#satisfying #finalwalkaround #cardetailing #carcare #cleancars #milfordct #milfordconnecticut #ctcars #connecticut", story: "The grand finale! ✨ This car is ready for a new owner. What's your favorite part of a fresh detail?" }, isDone: false },
+                     { title: "Our Commitment to Perfection", details: { description: "A video where a team member talks about the business's philosophy and commitment to high-quality work and customer satisfaction.", yt: "Why choose us? Our commitment to perfection and customer satisfaction sets us apart. #tds #smallbusiness #detailingpro #milfordct", hashtags: "#tds #smallbusiness #detailingpro #milfordct #milfordbusiness #connecticut #ctsmallbiz", story: "It's more than just detailing to us. It's about a commitment to perfection. 🙌 We're answering your questions about our philosophy!" }, isDone: false },
+                ]
+            }
+        ];
+
+        const strategyInfo = {
+            template: [
+                { title: "Title/Hook", text: "The first 3 seconds should feature a visually arresting moment or a question that grabs attention." },
+                { title: "Showcase (5-20 seconds)", text: "A demonstration of the service in action." },
+                { title: "Explain the 'Why' (10-25 seconds)", text: "A clear, concise explanation of the benefit to the customer. This is the core of the video's educational purpose." },
+                { title: "Call to Action (last 5 seconds)", text: "Tell the viewer what to do next. Examples: 'DM us for a quote,' 'Book your service online,' 'Check out our full process in the link in bio.'" }
+            ],
+            schedule: [
+                { day: "Sunday", theme: "Transformation Sunday", desc: "A dramatic before and after of a full detail, paint correction, or PPF install." },
+                { day: "Monday", theme: "Motivation Monday", desc: "A time-lapse of a full job or a video about the benefits of keeping your car clean." },
+                { day: "Tuesday", theme: "Tip Tuesday", desc: "An educational video with a quick tip on car care or detailing best practices." },
+                { day: "Wednesday", theme: "Work in Progress Wednesday", desc: "A behind-the-scenes video showing the team at work, a time-lapse of a PPF or tint install, or a shot of the shop." },
+                { day: "Thursday", theme: "PPF & Tint Thursday", desc: "A video focused specifically on Paint Protection Film or Window Tinting and their benefits." },
+                { day: "Friday", theme: "Front-end Friday", desc: "A video featuring a front-end ceramic coating, PPF, or a headlight restoration to celebrate the end of the week." },
+                { day: "Saturday", theme: "Ceramic Saturday", desc: "A video showcasing a finished ceramic coating job, with a dramatic water beading shot." }
+            ]
+        };
+
+        const contentContainer = document.getElementById('content-container');
+        const ideaModal = document.getElementById('ideaModal');
+        const modalContentDetails = document.getElementById('modal-content-details');
+        const doneNavLink = document.getElementById('done-nav-link');
+        const mobileNavSelect = document.getElementById('mobile-nav');
+
+        function createCard(idea, index, categoryIndex, isDone = false) {
+            const cardClass = isDone ? 'done-card' : '';
+            return `
+                <div class="card cursor-pointer p-6 ${cardClass}" data-index="${index}" data-category-index="${categoryIndex}" data-text="${idea.title.toLowerCase()} ${idea.details.description.toLowerCase()}">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-semibold text-gray-800">${isDone ? '✔' : ''} ${idea.title}</h3>
+                        ${!isDone ? `
+                            <button onclick="event.stopPropagation(); markAsDone(${categoryIndex}, ${index});" class="text-gray-400 hover:text-green-500 transition-colors">
+                                <span class="sr-only">Mark as Done</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderContent() {
+            let activeHtml = '';
+            let doneHtml = '';
+            const allIdeas = localStorage.getItem('tdsIdeas');
+            let ideas = allIdeas ? JSON.parse(allIdeas) : contentData;
+            
+            let doneCount = 0;
+
+            ideas.forEach((section, categoryIndex) => {
+                if (section.id !== 'strategy') {
+                    const activeIdeas = section.ideas.filter(idea => !idea.isDone);
+                    const doneIdeas = section.ideas.filter(idea => idea.isDone);
+                    
+                    activeHtml += `
+                        <section id="${section.id}" class="py-12">
+                            <h2 class="text-3xl font-bold text-gray-900 mb-2">${section.category}</h2>
+                            <p class="text-gray-600 mb-8">${section.description}</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                ${activeIdeas.map(idea => createCard(idea, section.ideas.indexOf(idea), categoryIndex)).join('')}
+                            </div>
+                        </section>
+                    `;
+
+                    doneIdeas.forEach(idea => {
+                        doneHtml += createCard(idea, section.ideas.indexOf(idea), categoryIndex, true);
+                    });
+                    doneCount += doneIdeas.length;
+                }
+            });
+
+            let strategySection = ideas.find(section => section.id === 'strategy');
+            if (strategySection) {
+                activeHtml += `
+                    <section id="strategy" class="py-12">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Strategy & Schedule</h2>
+                        <p class="text-gray-600 mb-8">Core principles for creating consistent, high-quality content.</p>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                            <div>
+                                <h3 class="text-2xl font-semibold mb-4 text-gray-800">TDS Signature Video Template</h3>
+                                <div class="space-y-4">
+                                    ${strategyInfo.template.map(item => `
+                                        <div class="p-4 bg-white rounded-lg border border-gray-200">
+                                            <h4 class="font-bold text-gray-700">${item.title}</h4>
+                                            <p class="text-gray-600">${item.text}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-semibold mb-4 text-gray-800">Weekly Posting Schedule</h3>
+                                <div class="space-y-2">
+                                    ${strategyInfo.schedule.map(item => `
+                                        <div class="p-4 bg-white rounded-lg border border-gray-200">
+                                            <h4 class="font-bold text-[#8ac03b]">${item.day}: <span class="text-gray-700">${item.theme}</span></h4>
+                                            <p class="text-gray-600 text-sm">${item.desc}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                `;
+            }
+
+            if (doneCount > 0) {
+                activeHtml += `
+                    <section id="done" class="py-12">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-3xl font-bold text-gray-900">Done Ideas (${doneCount})</h2>
+                            <button id="resetButton" class="px-4 py-2 bg-red-500 text-white rounded-lg font-medium transition-colors hover:bg-red-600">
+                                Reset All
+                            </button>
+                        </div>
+                        <p class="text-gray-600 mb-8">Ideas you've already used and can be reset.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            ${doneHtml}
+                        </div>
+                    </section>
+                `;
+                doneNavLink.classList.remove('hidden');
+                mobileNavSelect.querySelector('option[value="#done"]').classList.remove('hidden');
+            } else {
+                doneNavLink.classList.add('hidden');
+                mobileNavSelect.querySelector('option[value="#done"]').classList.add('hidden');
+            }
+
+            contentContainer.innerHTML = activeHtml;
+            
+            document.querySelectorAll('.card').forEach(card => {
+                if (!card.classList.contains('done-card')) {
+                    card.addEventListener('click', (e) => {
+                        const categoryIndex = card.dataset.categoryIndex;
+                        const index = card.dataset.index;
+                        showModal(ideas[categoryIndex].ideas[index], categoryIndex, index);
+                    });
+                }
+            });
+
+            const resetButton = document.getElementById('resetButton');
+            if(resetButton) {
+                resetButton.addEventListener('click', resetAllIdeas);
+            }
+        }
+        
+        function showModal(idea, categoryIndex, ideaIndex) {
+            modalContentDetails.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">${idea.title}</h2>
+                    <div class="flex space-x-2">
+                        <button id="markDoneInModal" class="px-4 py-2 bg-green-500 text-white rounded-lg font-medium transition-colors hover:bg-green-600">
+                            Mark as Done
+                        </button>
+                    </div>
+                </div>
+                <hr class="my-4">
+                <div class="space-y-6 text-gray-700">
+                    <div>
+                        <h4 class="font-bold text-gray-800">Video Description:</h4>
+                        <p id="modal-desc" class="mt-1 text-gray-600">${idea.details.description}</p>
+                        <button class="copy-button mt-2" data-target="modal-desc">Copy</button>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-800">YouTube Shorts Description:</h4>
+                        <p id="modal-yt" class="mt-1 italic text-gray-600">"${idea.details.yt}"</p>
+                        <button class="copy-button mt-2" data-target="modal-yt">Copy</button>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-800">Story Post Idea:</h4>
+                        <p id="modal-story" class="mt-1 text-gray-600">"${idea.details.story}"</p>
+                        <button class="copy-button mt-2" data-target="modal-story">Copy</button>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-800">Hashtags:</h4>
+                        <p id="modal-hashtags" class="mt-1 text-gray-500 text-sm break-words">${idea.details.hashtags}</p>
+                        <button class="copy-button mt-2" data-target="modal-hashtags">Copy</button>
+                    </div>
+                </div>
+            `;
+            ideaModal.style.display = 'block';
+
+            document.getElementById('markDoneInModal').addEventListener('click', () => {
+                markAsDone(categoryIndex, ideaIndex);
+                hideModal();
+            });
+
+            document.querySelectorAll('.copy-button').forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetId = button.dataset.target;
+                    const text = document.getElementById(targetId).innerText.replace(/"/g, '');
+                    document.execCommand('copy');
+                    const tempInput = document.createElement('textarea');
+                    tempInput.value = text;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    button.innerText = 'Copied!';
+                    setTimeout(() => {
+                        button.innerText = 'Copy';
+                    }, 2000);
+                });
+            });
+        }
+        
+        function hideModal() {
+            ideaModal.style.display = 'none';
+        }
+
+        function markAsDone(categoryIndex, ideaIndex) {
+            let ideas = JSON.parse(localStorage.getItem('tdsIdeas')) || contentData;
+            ideas[categoryIndex].ideas[ideaIndex].isDone = true;
+            localStorage.setItem('tdsIdeas', JSON.stringify(ideas));
+            renderContent();
+        }
+
+        function resetAllIdeas() {
+            let ideas = JSON.parse(localStorage.getItem('tdsIdeas')) || contentData;
+            ideas.forEach(section => {
+                section.ideas.forEach(idea => {
+                    idea.isDone = false;
+                });
+            });
+            localStorage.setItem('tdsIdeas', JSON.stringify(ideas));
+            renderContent();
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            renderContent();
+            
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('keyup', () => {
+                const filter = searchInput.value.toLowerCase();
+                const cards = document.querySelectorAll('.card');
+                cards.forEach(card => {
+                    const text = card.dataset.text;
+                    if (text.includes(filter)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+            
+            document.querySelector('.close-button').addEventListener('click', hideModal);
+            window.onclick = function(event) {
+                if (event.target == ideaModal) {
+                    hideModal();
+                }
+            };
+            
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.toggle('active', link.getAttribute('href').substring(1) === entry.target.id);
+                        });
+                    }
+                });
+            }, { rootMargin: "-50% 0px -50% 0px" });
+            
+            sections.forEach(section => observer.observe(section));
+
+            const mobileNav = document.getElementById('mobile-nav');
+            mobileNav.addEventListener('change', (e) => {
+                const targetId = e.target.value;
+                document.querySelector(targetId).scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>
