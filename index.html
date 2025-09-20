@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Detail Shop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg-color: #0d0d0d;
+            --secondary-bg-color: #1a1a1a;
+            --text-color: #e5e7eb;
+            --accent-color: #8ac03b; /* TDS Green */
+            --social-bg-color: #2d2d2d;
+        }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--primary-bg-color);
+            color: var(--text-color);
+        }
+        .container {
+            max-width: 600px;
+        }
+        .button-link {
+            transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        .button-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+        }
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: var(--primary-bg-color);
+        }
+        .btn-primary:hover {
+            background-color: #9cd452;
+        }
+        .btn-secondary {
+            background-color: var(--secondary-bg-color);
+            color: var(--text-color);
+            border: 1px solid #2d2d2d;
+        }
+        .btn-secondary:hover {
+            background-color: #282828;
+        }
+        .social-link {
+            width: 50px;
+            height: 50px;
+            background-color: var(--social-bg-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .social-link:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="container text-center py-8">
+
+        <!-- Logo Image -->
+        <img src="tds-white-w-outline-blk-small.png" alt="The Detail Shop Logo" class="mx-auto mb-8 w-48 sm:w-64 h-auto">
+
+        <!-- Link Buttons -->
+        <div class="space-y-4">
+            <!-- Book a Service -->
+            <a href="https://app.urable.com/virtual-shop/rZw9TykdOx7z1RrqBiix" target="_blank" class="button-link block w-full px-6 py-4 rounded-xl font-bold text-xl btn-primary">
+                Book a Service
+            </a>
+            <!-- Shop Detailing Supplies -->
+            <a href="https://app.urable.com/virtual-shop/rZw9TykdOx7z1RrqBiix/iXe5cU2ODKfzZue5AnT9" target="_blank" class="button-link block w-full px-6 py-4 rounded-xl font-bold text-xl btn-secondary">
+                Shop Detailing Supplies
+            </a>
+            <!-- View Our Services -->
+            <a href="https://thedetailshopct.com/#services" target="_blank" class="button-link block w-full px-6 py-4 rounded-xl font-bold text-xl btn-secondary">
+                View Our Services
+            </a>
+            <!-- See Our Work -->
+            <a href="https://www.instagram.com/thedetailshopct" target="_blank" class="button-link block w-full px-6 py-4 rounded-xl font-bold text-xl btn-secondary">
+                See Our Work
+            </a>
+            <!-- Google Reviews -->
+            <a href="https://g.page/thedetailshopct" target="_blank" class="button-link block w-full px-6 py-4 rounded-xl font-bold text-xl btn-secondary">
+                Read Our Reviews
+            </a>
+            <!-- FAQs Page -->
+            <a href="faq.html" class="button-link block w-full px-6 py-4 rounded-xl font-bold text-xl btn-secondary">
+                FAQs
+            </a>
+            <!-- Call Us -->
+            <a href="tel:1-203-555-0123" class="button-link block w-full px-6 py-4 rounded-xl font-bold text-xl btn-secondary">
+                Call Us
+            </a>
+            <!-- Get Directions -->
+            <a href="https://www.google.com/maps/dir/?api=1&destination=The+Detail+Shop+Milford+CT" target="_blank" class="button-link block w-full px-6 py-4 rounded-xl font-bold text-xl btn-secondary">
+                Get Directions
+            </a>
+        </div>
+
+        <!-- Social Media Icons -->
+        <div class="flex justify-center space-x-4 mt-8">
+            <!-- NOTE: Replace the src attribute with the path to your own icon files -->
+            <a href="https://www.youtube.com/@thedetailshopct" target="_blank" class="social-link" aria-label="YouTube">
+                <img src="https://placehold.co/24x24/e5e7eb/0d0d0d?text=YT" alt="YouTube" class="w-6 h-6 rounded-full">
+            </a>
+            <a href="https://www.facebook.com/thedetailshopct" target="_blank" class="social-link" aria-label="Facebook">
+                <img src="https://placehold.co/24x24/e5e7eb/0d0d0d?text=FB" alt="Facebook" class="w-6 h-6 rounded-full">
+            </a>
+            <a href="https://www.instagram.com/thedetailshopct" target="_blank" class="social-link" aria-label="Instagram">
+                <img src="https://placehold.co/24x24/e5e7eb/0d0d0d?text=IG" alt="Instagram" class="w-6 h-6 rounded-full">
+            </a>
+            <a href="https://www.tiktok.com/@thedetailshopct" target="_blank" class="social-link" aria-label="TikTok">
+                <img src="https://placehold.co/24x24/e5e7eb/0d0d0d?text=TT" alt="TikTok" class="w-6 h-6 rounded-full">
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>
+

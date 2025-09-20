@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Detail Shop - FAQs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg-color: #0d0d0d;
+            --secondary-bg-color: #1a1a1a;
+            --text-color: #e5e7eb;
+            --accent-color: #8ac03b; 
+        }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--primary-bg-color);
+            color: var(--text-color);
+        }
+        .faq-item {
+            border-bottom: 1px solid #2d2d2d;
+        }
+        .faq-question {
+            cursor: pointer;
+        }
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .faq-question.active + .faq-answer {
+            max-height: 500px; /* Adjust as needed */
+            transition: max-height 0.5s ease-in;
+        }
+        .arrow {
+            transition: transform 0.3s ease;
+        }
+        .faq-question.active .arrow {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div class="max-w-3xl mx-auto">
+        <div class="text-center mb-10">
+            <a href="index.html" class="inline-block mb-6">
+                <img src="tds-white-w-outline-blk-small.png" alt="The Detail Shop Logo" class="w-40 h-auto">
+            </a>
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">Frequently Asked Questions</h1>
+        </div>
+
+        <div class="space-y-4">
+            <!-- FAQ Item 1 -->
+            <div class="faq-item">
+                <div class="faq-question flex justify-between items-center p-4">
+                    <h3 class="text-lg font-semibold">What is Paint Protection Film (PPF)?</h3>
+                    <svg class="arrow w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <div class="faq-answer p-4 pt-0 text-gray-400">
+                    <p>Paint Protection Film (PPF), or clear bra, is a transparent, durable urethane film applied to your vehicle's paint. It is the ultimate defense against rock chips, road debris, scratches, bug splatter, and other environmental contaminants. Many modern films also have self-healing properties for light scratches.</p>
+                </div>
+            </div>
+            <!-- FAQ Item 2 -->
+            <div class="faq-item">
+                <div class="faq-question flex justify-between items-center p-4">
+                    <h3 class="text-lg font-semibold">What's the difference between PPF and a Ceramic Coating?</h3>
+                    <svg class="arrow w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <div class="faq-answer p-4 pt-0 text-gray-400">
+                    <p>Think of it as physical vs. chemical protection. PPF is a physical barrier that absorbs impacts from things like rock chips. A Ceramic Coating is a chemical barrier that provides incredible gloss, UV protection, and hydrophobic (water-beading) properties, making your car easier to clean. For ultimate protection, you can apply a ceramic coating on top of PPF.</p>
+                </div>
+            </div>
+            <!-- FAQ Item 3 -->
+            <div class="faq-item">
+                <div class="faq-question flex justify-between items-center p-4">
+                    <h3 class="text-lg font-semibold">Will a Ceramic Coating stop scratches and rock chips?</h3>
+                    <svg class="arrow w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <div class="faq-answer p-4 pt-0 text-gray-400">
+                    <p>A ceramic coating adds a hard, sacrificial layer that can help resist very light swirl marks from washing. However, it will NOT prevent scratches or protect against rock chips. For that level of impact protection, Paint Protection Film (PPF) is the recommended solution.</p>
+                </div>
+            </div>
+            <!-- FAQ Item 4 -->
+            <div class="faq-item">
+                <div class="faq-question flex justify-between items-center p-4">
+                    <h3 class="text-lg font-semibold">My car is brand new. Does it still need paint correction?</h3>
+                    <svg class="arrow w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <div class="faq-answer p-4 pt-0 text-gray-400">
+                    <p>Almost always, yes. New vehicles often accumulate swirl marks and minor imperfections from transport and improper washing at the dealership. Paint correction perfects the finish BEFORE we lock it in with a ceramic coating or PPF, ensuring the best possible result.</p>
+                </div>
+            </div>
+             <!-- FAQ Item 5 -->
+            <div class="faq-item">
+                <div class="faq-question flex justify-between items-center p-4">
+                    <h3 class="text-lg font-semibold">What are the benefits of ceramic window tint?</h3>
+                    <svg class="arrow w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <div class="faq-answer p-4 pt-0 text-gray-400">
+                    <p>While all tint provides privacy and style, ceramic tint is superior due to its heat and UV rejection properties. It uses ceramic particles to block a significant amount of infrared heat, keeping your car's interior much cooler without needing a very dark shade. It also blocks over 99% of harmful UV rays, protecting you and your car's interior.</p>
+                </div>
+            </div>
+            <!-- FAQ Item 6 -->
+            <div class="faq-item">
+                <div class="faq-question flex justify-between items-center p-4">
+                    <h3 class="text-lg font-semibold">How long does an installation take?</h3>
+                    <svg class="arrow w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <div class="faq-answer p-4 pt-0 text-gray-400">
+                    <p>This depends entirely on the service. Window tinting may take a few hours. A single-stage paint correction and ceramic coating can often take 1-2 days due to preparation and curing time. A full-car PPF installation is a meticulous process that can take several days to complete correctly.</p>
+                </div>
+            </div>
+            <!-- FAQ Item 7 -->
+            <div class="faq-item">
+                <div class="faq-question flex justify-between items-center p-4">
+                    <h3 class="text-lg font-semibold">How do I maintain my car after these services?</h3>
+                    <svg class="arrow w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <div class="faq-answer p-4 pt-0 text-gray-400">
+                    <p>Proper maintenance is key. We strongly recommend using the two-bucket hand wash method with a pH-neutral soap. Avoid automatic car washes with brushes that can damage film and coatings. We will provide you with detailed care instructions specific to the services you received.</p>
+                </div>
+            </div>
+            <!-- FAQ Item 8 -->
+            <div class="faq-item">
+                <div class="faq-question flex justify-between items-center p-4">
+                    <h3 class="text-lg font-semibold">Can you apply PPF to just the front of my car?</h3>
+                    <svg class="arrow w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <div class="faq-answer p-4 pt-0 text-gray-400">
+                    <p>Yes, absolutely. Our most popular PPF package is a "Full Front," which covers the entire hood, front bumper, front fenders, and side mirrors. This protects the most vulnerable, high-impact areas of your vehicle. We also offer full vehicle coverage and custom packages.</p>
+                </div>
+            </div>
+            <!-- FAQ Item 9 -->
+            <div class="faq-item">
+                <div class="faq-question flex justify-between items-center p-4">
+                    <h3 class="text-lg font-semibold">Is your window tint legal in Connecticut?</h3>
+                    <svg class="arrow w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <div class="faq-answer p-4 pt-0 text-gray-400">
+                    <p>Yes, we offer tint shades that comply with Connecticut state laws. We will consult with you to make sure you choose a film that meets legal requirements (VLT - Visible Light Transmission) for each window while achieving the look and performance you want.</p>
+                </div>
+            </div>
+            <!-- FAQ Item 10 -->
+            <div class="faq-item">
+                <div class="faq-question flex justify-between items-center p-4">
+                    <h3 class="text-lg font-semibold">How much do your services cost?</h3>
+                    <svg class="arrow w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+                <div class="faq-answer p-4 pt-0 text-gray-400">
+                    <p>Pricing varies widely based on the vehicle's size, its initial condition, and the specific services and packages you choose. Because every car and client is unique, we prefer to provide a custom quote after a consultation. Please contact us to discuss your vehicle and goals!</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-10">
+            <a href="index.html" class="inline-block bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                &larr; Back to Links
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.faq-question').forEach(button => {
+            button.addEventListener('click', () => {
+                button.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>
+
